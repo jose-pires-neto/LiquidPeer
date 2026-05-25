@@ -127,6 +127,7 @@ function App() {
     peerId, 
     state: peerState, 
     error: peerError, 
+    connectionStage,
     transfers, 
     initializePeer, 
     connectToPeer, 
@@ -159,10 +160,7 @@ function App() {
   const submitJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!joinId.trim()) return;
-    initializePeer();
-    setTimeout(() => {
-      connectToPeer(joinId.trim().toUpperCase());
-    }, 800);
+    connectToPeer(joinId.trim().toUpperCase());
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -267,7 +265,36 @@ function App() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative select-none">
       
-      <main className="w-full max-w-md z-10 liquid-glass-panel p-6 md:p-8 transition-all duration-500">
+      <main className="w-full max-w-md z-10 liquid-glass-panel p-6 md:p-8 transition-all duration-500 relative">
+        {peerState === 'connecting' && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-[#050814]/90 backdrop-blur-xl animate-in fade-in duration-300">
+            {/* Pulsing Liquid-like Loader */}
+            <div className="relative w-24 h-24 flex items-center justify-center mb-6">
+              {/* Outer pulsing ring */}
+              <div className="absolute inset-0 rounded-full bg-sky-500/10 border border-sky-500/30 animate-ping opacity-75" />
+              {/* Middle pulsing liquid ring */}
+              <div className="absolute inset-4 rounded-full bg-sky-500/20 border border-sky-500/40 animate-pulse" />
+              {/* Inner liquid drop core */}
+              <div className="absolute inset-8 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 shadow-[0_0_15px_rgba(56,189,248,0.5)] flex items-center justify-center">
+                <Share2 className="w-5 h-5 text-white animate-pulse" />
+              </div>
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-sm font-bold text-white tracking-wide">Conectando...</h3>
+              <p className="text-[11px] text-white/50 text-center max-w-[200px] leading-relaxed">
+                {connectionStage}
+              </p>
+            </div>
+
+            <button
+              onClick={disconnect}
+              className="mt-8 liquid-glass-button px-5 py-2 text-[10px] flex items-center gap-1.5 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Cancelar
+            </button>
+          </div>
+        )}
         
         {/* Sleek Minimalist Header */}
         <header className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
@@ -321,10 +348,7 @@ function App() {
           {showScanner && (
             <QRScanner 
               onScan={(code) => {
-                initializePeer();
-                setTimeout(() => {
-                  connectToPeer(code.toUpperCase());
-                }, 800);
+                connectToPeer(code.toUpperCase());
                 setShowScanner(false);
               }} 
               onClose={() => setShowScanner(false)} 

@@ -32,6 +32,7 @@ export function usePeer(options?: UsePeerOptions) {
   const [connection, setConnection] = useState<DataConnection | null>(null);
   const [state, setState] = useState<PeerState>('disconnected');
   const [error, setError] = useState<string | null>(null);
+  const [connectionStage, setConnectionStage] = useState<string>('');
   const [transfers, setTransfers] = useState<Record<string, FileTransfer>>({});
 
   const receiveBuffer = useRef<Blob[]>([]);
@@ -39,6 +40,18 @@ export function usePeer(options?: UsePeerOptions) {
 
   const onConnectRef = useRef(options?.onConnect);
   const onDisconnectRef = useRef(options?.onDisconnect);
+  
+  const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingConnRef = useRef<DataConnection | null>(null);
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Keep callbacks up-to-date to avoid dependency changes
   useEffect(() => {
@@ -122,6 +135,11 @@ export function usePeer(options?: UsePeerOptions) {
   // Set up connection event handlers
   const setupConnection = useCallback((conn: DataConnection) => {
     conn.on('open', () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
+      pendingConnRef.current = null;
       setConnection(conn);
       setState('connected');
       onConnectRef.current?.();
@@ -132,12 +150,22 @@ export function usePeer(options?: UsePeerOptions) {
     });
 
     conn.on('close', () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
+      pendingConnRef.current = null;
       setConnection(null);
       setState('disconnected');
       onDisconnectRef.current?.();
     });
     
     conn.on('error', (err) => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
+      pendingConnRef.current = null;
       setError(err.message);
       setState('error');
     });
@@ -145,6 +173,11 @@ export function usePeer(options?: UsePeerOptions) {
 
   // Initialize Peer
   const initializePeer = useCallback((id?: string) => {
+    // If a peer already exists, destroy it before creating a new one to prevent orphaned connections
+    if (peer) {
+      peer.destroy();
+    }
+
     const newPeer = id ? new Peer(id) : new Peer();
     
     newPeer.on('open', (id) => {
@@ -162,15 +195,62 @@ export function usePeer(options?: UsePeerOptions) {
     });
 
     return newPeer;
-  }, [setupConnection]);
-
-  // Connect to target peer
-  const connectToPeer = useCallback((targetId: string) => {
-    if (!peer) return;
-    setState('connecting');
-    const conn = peer.connect(targetId, { reliable: true });
-    setupConnection(conn);
   }, [peer, setupConnection]);
+
+  // Connect to target peer with asynchronous initialization safety
+  const connectToPeer = useCallback((targetId: string) => {
+    let activePeer = peer;
+    
+    setState('connecting');
+    setError(null);
+    setConnectionStage('Buscando dispositivo...');
+
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+    }
+    
+    const performConnect = (p: Peer) => {
+      // Transition stage message after 1.5 seconds to "Estabelecendo canal seguro..."
+      const transitionTimer = setTimeout(() => {
+        setConnectionStage('Estabelecendo canal seguro...');
+      }, 1500);
+
+      const conn = p.connect(targetId, { reliable: true });
+      pendingConnRef.current = conn;
+      setupConnection(conn);
+
+      // Start 12-second timeout
+      connectionTimeoutRef.current = setTimeout(() => {
+        clearTimeout(transitionTimer);
+        if (pendingConnRef.current === conn) {
+          conn.close();
+          pendingConnRef.current = null;
+          setError('Não foi possível encontrar o dispositivo. Verifique se o código está correto.');
+          setState('error');
+        }
+      }, 12000);
+    };
+
+    if (!activePeer) {
+      activePeer = initializePeer();
+    }
+
+    if (activePeer.open) {
+      performConnect(activePeer);
+    } else {
+      activePeer.once('open', () => {
+        performConnect(activePeer!);
+      });
+      activePeer.once('error', (err) => {
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
+        setError(err.message);
+        setState('error');
+      });
+    }
+  }, [peer, initializePeer, setupConnection]);
 
   // Slice and transmit file
   const sendFile = useCallback(async (file: File) => {
@@ -260,6 +340,14 @@ export function usePeer(options?: UsePeerOptions) {
 
   // Clean disconnect
   const disconnect = useCallback(() => {
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+      connectionTimeoutRef.current = null;
+    }
+    if (pendingConnRef.current) {
+      pendingConnRef.current.close();
+      pendingConnRef.current = null;
+    }
     if (connection) {
       connection.close();
     }
@@ -278,6 +366,7 @@ export function usePeer(options?: UsePeerOptions) {
     peerId,
     state,
     error,
+    connectionStage,
     transfers: Object.values(transfers),
     initializePeer,
     connectToPeer,
