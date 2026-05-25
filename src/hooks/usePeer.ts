@@ -16,10 +16,18 @@ export interface FileTransfer {
   startTime?: number;
 }
 
+export interface PeerMessage {
+  id: string;
+  content: string;
+  direction: 'sending' | 'receiving';
+  timestamp: number;
+}
+
 export type TransferMessage = 
   | { type: 'file-start'; id: string; name: string; size: number }
   | { type: 'file-chunk'; id: string; chunk: ArrayBuffer }
-  | { type: 'file-end'; id: string };
+  | { type: 'file-end'; id: string }
+  | { type: 'text'; id: string; content: string; timestamp: number };
 
 export interface UsePeerOptions {
   onConnect?: () => void;
@@ -34,6 +42,7 @@ export function usePeer(options?: UsePeerOptions) {
   const [error, setError] = useState<string | null>(null);
   const [connectionStage, setConnectionStage] = useState<string>('');
   const [transfers, setTransfers] = useState<Record<string, FileTransfer>>({});
+  const [messages, setMessages] = useState<PeerMessage[]>([]);
 
   const receiveBuffers = useRef<Record<string, Blob[]>>({});
   const receivingFiles = useRef<Record<string, {id: string, name: string, size: number, received: number, startTime: number}>>({});
@@ -135,6 +144,13 @@ export function usePeer(options?: UsePeerOptions) {
       
       delete receivingFiles.current[fileId];
       delete receiveBuffers.current[fileId];
+    } else if (data.type === 'text') {
+      setMessages(prev => [...prev, {
+        id: data.id,
+        content: data.content,
+        direction: 'receiving',
+        timestamp: data.timestamp
+      }]);
     }
   }, []);
 
@@ -345,6 +361,26 @@ export function usePeer(options?: UsePeerOptions) {
     readNextChunk();
   }, [connection, state]);
 
+  const sendText = useCallback((content: string) => {
+    if (!connection || state !== 'connected') return;
+
+    const id = Math.random().toString(36).substring(7);
+    const msg = {
+      type: 'text' as const,
+      id,
+      content,
+      timestamp: Date.now()
+    };
+    connection.send(msg);
+
+    setMessages(prev => [...prev, {
+      id,
+      content,
+      direction: 'sending',
+      timestamp: msg.timestamp
+    }]);
+  }, [connection, state]);
+
   // Clean disconnect
   const disconnect = useCallback(() => {
     if (connectionTimeoutRef.current) {
@@ -366,6 +402,7 @@ export function usePeer(options?: UsePeerOptions) {
     setPeer(null);
     setConnection(null);
     setTransfers({});
+    setMessages([]);
     receivingFiles.current = {};
     receiveBuffers.current = {};
     onDisconnectRef.current?.();
@@ -377,9 +414,11 @@ export function usePeer(options?: UsePeerOptions) {
     error,
     connectionStage,
     transfers: Object.values(transfers),
+    messages,
     initializePeer,
     connectToPeer,
     sendFile,
+    sendText,
     disconnect
   };
 }

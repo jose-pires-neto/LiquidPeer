@@ -19,7 +19,8 @@ import {
   Music,
   FileArchive,
   FileCode,
-  File as FileIcon
+  File as FileIcon,
+  Clipboard
 } from 'lucide-react';
 import { usePeer, type FileTransfer } from './hooks/usePeer';
 import { cn } from './lib/utils';
@@ -30,6 +31,89 @@ interface ScannerProps {
   onScan: (code: string) => void;
   onClose: () => void;
 }
+
+// Synthetic Audio Feedback using Web Audio API (0KB Bandwidth)
+const playDropletSound = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.15);
+    
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  } catch (e) {
+    console.error("Audio error", e);
+  }
+};
+
+const playBubbleSound = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(180, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(850, ctx.currentTime + 0.12);
+    
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  } catch (e) {
+    console.error("Audio error", e);
+  }
+};
+
+const playFlowSound = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    for (let i = 0; i < 4; i++) {
+      const time = ctx.currentTime + i * 0.05;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      const startFreq = 200 + Math.random() * 80;
+      const endFreq = 650 + Math.random() * 150;
+      osc.frequency.setValueAtTime(startFreq, time);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.07);
+      
+      gain.gain.setValueAtTime(0.1, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.07);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(time);
+      osc.stop(time + 0.07);
+    }
+  } catch (e) {
+    console.error("Audio error", e);
+  }
+};
 
 function QRScanner({ onScan, onClose }: ScannerProps) {
   const [error, setError] = useState<string | null>(null);
@@ -117,8 +201,11 @@ function App() {
   const [copied, setCopied] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'transfer' | 'files'>('transfer');
+  
+  // Tab control: 'transfer' (mobile only), 'files', 'chat'
+  const [activeTab, setActiveTab] = useState<'transfer' | 'files' | 'chat'>('transfer');
   const [clearedIds, setClearedIds] = useState<Set<string>>(new Set());
+  const [chatInput, setChatInput] = useState('');
 
   // Toast notifications state
   interface Toast {
@@ -140,6 +227,7 @@ function App() {
   const [showScanner, setShowScanner] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const { 
     peerId, 
@@ -147,20 +235,25 @@ function App() {
     error: peerError, 
     connectionStage,
     transfers, 
+    messages,
     initializePeer, 
     connectToPeer, 
     sendFile, 
+    sendText,
     disconnect 
   } = usePeer({
     onConnect: () => {
       setView('transfer');
       setShowScanner(false);
       showToast('Conectado com sucesso!', 'success');
+      playDropletSound();
+      setActiveTab('transfer'); // default on mobile
     },
     onDisconnect: () => {
       setView('home');
       setJoinId('');
       showToast('Conexão encerrada.', 'info');
+      playDropletSound();
     }
   });
 
@@ -174,13 +267,21 @@ function App() {
     }
   }, [peerError, showToast]);
 
-  // Watch transfers completion
+  // Watch transfers and play sounds
   const prevTransfersStates = useRef<Record<string, string>>({});
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     transfers.forEach(t => {
       const prevState = prevTransfersStates.current[t.id];
+      
+      // Trigger flow sound on start
+      if (t.status === 'transferring' && prevState !== 'transferring' && prevState !== 'completed') {
+        playFlowSound();
+      }
+      
+      // Trigger bubble sound on completion
       if (t.status === 'completed' && prevState !== 'completed') {
+        playBubbleSound();
         const timer = setTimeout(() => {
           showToast(`"${t.name}" transferido com sucesso!`, 'success');
         }, 0);
@@ -197,6 +298,42 @@ function App() {
       timers.forEach(clearTimeout);
     };
   }, [transfers, showToast]);
+
+  // Watch incoming text messages to play sound and show toast
+  const prevMessagesLength = useRef(0);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (messages.length > prevMessagesLength.current) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.direction === 'receiving') {
+        timer = setTimeout(() => {
+          showToast('Nova nota recebida!', 'info');
+          playBubbleSound();
+        }, 0);
+      }
+      // Scroll to bottom of chat
+      setTimeout(() => {
+        chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    }
+    prevMessagesLength.current = messages.length;
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [messages, showToast]);
+
+  // Force activeTab switch on desktop resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && activeTab === 'transfer') {
+        setActiveTab('files');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    // run initially
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, [activeTab]);
 
   const handleHost = () => {
     const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -258,10 +395,11 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, toastMsg = 'Código copiado!') => {
     navigator.clipboard.writeText(text);
     setCopied(true);
-    showToast('Código copiado!', 'success');
+    showToast(toastMsg, 'success');
+    playBubbleSound();
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -322,6 +460,23 @@ function App() {
       return next;
     });
     showToast('Histórico limpo!', 'info');
+  };
+
+  const submitChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    sendText(chatInput.trim());
+    setChatInput('');
+    playBubbleSound();
+  };
+
+  const isLink = (text: string) => {
+    try {
+      new URL(text);
+      return true;
+    } catch {
+      return text.startsWith('http://') || text.startsWith('https://');
+    }
   };
 
   const activeTransfer = transfers.find(t => t.status === 'transferring');
@@ -651,25 +806,39 @@ function App() {
               {/* Mobile Glass Bottom/Top Dock Tab Bar */}
               <div className="flex md:hidden items-center justify-center p-1 bg-white/[0.03] border border-white/5 rounded-2xl mb-5 shadow-inner">
                 <button 
-                  onClick={() => setMobileTab('transfer')}
+                  onClick={() => setActiveTab('transfer')}
                   className={cn(
                     "flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300 cursor-pointer",
-                    mobileTab === 'transfer' ? "bg-white/10 text-sky-300 shadow-sm border border-white/5" : "text-white/40 hover:text-white/60"
+                    activeTab === 'transfer' ? "bg-white/10 text-sky-300 shadow-sm border border-white/5" : "text-white/40 hover:text-white/60"
                   )}
                 >
                   Transferir
                 </button>
                 <button 
-                  onClick={() => setMobileTab('files')}
+                  onClick={() => setActiveTab('files')}
                   className={cn(
                     "flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300 relative cursor-pointer",
-                    mobileTab === 'files' ? "bg-white/10 text-sky-300 shadow-sm border border-white/5" : "text-white/40 hover:text-white/60"
+                    activeTab === 'files' ? "bg-white/10 text-sky-300 shadow-sm border border-white/5" : "text-white/40 hover:text-white/60"
                   )}
                 >
                   Arquivos
                   {visibleTransfers.length > 0 && (
                     <span className="absolute top-1 right-2 bg-sky-500 text-[8px] font-extrabold text-white w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#050814]">
                       {visibleTransfers.length}
+                    </span>
+                  )}
+                </button>
+                <button 
+                  onClick={() => setActiveTab('chat')}
+                  className={cn(
+                    "flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300 relative cursor-pointer",
+                    activeTab === 'chat' ? "bg-white/10 text-sky-300 shadow-sm border border-white/5" : "text-white/40 hover:text-white/60"
+                  )}
+                >
+                  Notas
+                  {messages.length > 0 && (
+                    <span className="absolute top-1 right-2 bg-sky-500 text-[8px] font-extrabold text-white w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#050814]">
+                      {messages.length}
                     </span>
                   )}
                 </button>
@@ -681,7 +850,7 @@ function App() {
                 {/* COLUMN 1: Connection Tube & Upload Drop Zone */}
                 <div className={cn(
                   "space-y-5 flex flex-col justify-between transition-all duration-300",
-                  mobileTab === 'transfer' ? "flex" : "hidden md:flex"
+                  activeTab === 'transfer' ? "flex" : "hidden md:flex"
                 )}>
                   
                   {/* Glass Connection Tube */}
@@ -778,161 +947,302 @@ function App() {
                   </div>
                 </div>
 
-                {/* COLUMN 2: Files Manager (Queue & History) */}
+                {/* COLUMN 2: Files & Chat Tabbed Manager */}
                 <div className={cn(
                   "flex-1 flex flex-col h-full md:border-l md:border-white/5 md:pl-8 transition-all duration-300",
-                  mobileTab === 'files' ? "flex" : "hidden md:flex"
+                  activeTab !== 'transfer' ? "flex" : "hidden md:flex"
                 )}>
                   
-                  {/* Active / Pending Section */}
-                  <div className="space-y-3 flex-1 flex flex-col">
-                    <h4 className="text-[9px] font-extrabold text-white/35 uppercase tracking-widest pl-1 flex items-center justify-between">
-                      <span>Em Trânsito ({activeTransfersList.length})</span>
-                      {activeTransfer && (
-                        <span className="text-[9px] text-sky-400 font-bold lowercase flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-                          ativo
-                        </span>
-                      )}
-                    </h4>
-                    
-                    {activeTransfersList.length === 0 ? (
-                      <div className="p-5 rounded-2xl border border-white/5 bg-black/10 text-center flex flex-col items-center justify-center gap-2 min-h-[90px]">
-                        <Share2 className="w-4 h-4 text-white/20" />
-                        <span className="text-[9px] text-white/30 font-semibold uppercase tracking-wider">Sem transferências ativas</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                        {activeTransfersList.map(transfer => {
-                          const iconConfig = getFileIcon(transfer.name);
-                          const Icon = iconConfig.icon;
-                          
-                          return (
-                            <div key={transfer.id} className="liquid-glass-card p-3 flex items-center gap-3 border border-white/5">
-                              <div className={cn("p-2 rounded-lg border border-white/10 flex-shrink-0 bg-white/[0.02]", iconConfig.color)}>
-                                <Icon className="w-4 h-4" />
-                              </div>
+                  {/* Desktop Right Column Tab Header */}
+                  <div className="hidden md:flex items-center justify-between border-b border-white/5 pb-3 mb-5">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setActiveTab('files')}
+                        className={cn(
+                          "text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all cursor-pointer",
+                          activeTab === 'files' ? "border-sky-500/20 bg-sky-500/10 text-sky-300 shadow-sm" : "border-transparent text-white/40 hover:text-white/60"
+                        )}
+                      >
+                        Arquivos ({visibleTransfers.length})
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab('chat')}
+                        className={cn(
+                          "text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all relative cursor-pointer",
+                          activeTab === 'chat' ? "border-sky-500/20 bg-sky-500/10 text-sky-300 shadow-sm" : "border-transparent text-white/40 hover:text-white/60"
+                        )}
+                      >
+                        Notas / Clipboard
+                        {messages.length > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-sky-500 text-[8px] font-extrabold text-white w-4 h-4 rounded-full flex items-center justify-center border border-[#050814] animate-pulse">
+                            {messages.length}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-baseline mb-0.5">
-                                  <span className="font-bold text-[11px] truncate block text-white/80">{transfer.name}</span>
-                                  <span className="text-[9px] text-white/40 font-medium whitespace-nowrap ml-2">
-                                    {formatBytes(transfer.size)}
-                                  </span>
+                  {/* SUB-VIEW 1: FILES LIST */}
+                  {activeTab === 'files' && (
+                    <div className="flex-1 flex flex-col gap-6 animate-in fade-in duration-300">
+                      
+                      {/* Active Queue */}
+                      <div className="space-y-3 flex-1 flex flex-col">
+                        <h4 className="text-[9px] font-extrabold text-white/35 uppercase tracking-widest pl-1 flex items-center justify-between">
+                          <span>Em Trânsito ({activeTransfersList.length})</span>
+                          {activeTransfer && (
+                            <span className="text-[9px] text-sky-400 font-bold lowercase flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                              ativo
+                            </span>
+                          )}
+                        </h4>
+                        
+                        {activeTransfersList.length === 0 ? (
+                          <div className="p-5 rounded-2xl border border-white/5 bg-black/10 text-center flex flex-col items-center justify-center gap-2 min-h-[90px]">
+                            <Share2 className="w-4 h-4 text-white/20" />
+                            <span className="text-[9px] text-white/30 font-semibold uppercase tracking-wider">Sem transferências ativas</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                            {activeTransfersList.map(transfer => {
+                              const iconConfig = getFileIcon(transfer.name);
+                              const Icon = iconConfig.icon;
+                              
+                              return (
+                                <div key={transfer.id} className="liquid-glass-card p-3 flex items-center gap-3 border border-white/5">
+                                  <div className={cn("p-2 rounded-lg border border-white/10 flex-shrink-0 bg-white/[0.02]", iconConfig.color)}>
+                                    <Icon className="w-4 h-4" />
+                                  </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-baseline mb-0.5">
+                                      <span className="font-bold text-[11px] truncate block text-white/80">{transfer.name}</span>
+                                      <span className="text-[9px] text-white/40 font-medium whitespace-nowrap ml-2">
+                                        {formatBytes(transfer.size)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden mt-1.5 relative border border-white/5 shadow-inner">
+                                      <div 
+                                        className="h-full rounded-full transition-all duration-300 bg-gradient-to-r from-blue-600/80 to-sky-400/80 relative overflow-hidden"
+                                        style={{ width: `${transfer.progress}%` }}
+                                      >
+                                        {transfer.status === 'transferring' && (
+                                          <>
+                                            <div className="absolute inset-0 w-[200%] h-full animate-wave-flow opacity-30 text-white pointer-events-none">
+                                              <svg className="h-full w-full" viewBox="0 0 200 20" preserveAspectRatio="none">
+                                                <path d="M0,10 C50,15 50,5 100,10 C150,15 150,5 200,10 L200,20 L0,20 Z" fill="currentColor" />
+                                              </svg>
+                                            </div>
+                                            <div className="absolute inset-0 w-[200%] h-full animate-wave-flow-slow opacity-15 text-white pointer-events-none" style={{ animationDirection: 'reverse' }}>
+                                              <svg className="h-full w-full" viewBox="0 0 200 20" preserveAspectRatio="none">
+                                                <path d="M0,10 C50,5 50,15 100,10 C150,5 150,15 200,10 L200,20 L0,20 Z" fill="currentColor" />
+                                              </svg>
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex justify-between mt-1 text-[9px] font-semibold text-white/35">
+                                      <span className="uppercase tracking-wide">
+                                        {transfer.direction === 'sending' ? 'Enviando' : 'Recebendo'} • {formatSpeed(transfer.speed)}
+                                      </span>
+                                      <span className="text-white/60">
+                                        {transfer.eta !== undefined && transfer.eta > 0 
+                                          ? formatEta(transfer.eta) 
+                                          : `${Math.round(transfer.progress)}%`
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-shrink-0 ml-1">
+                                    <div className="w-6 h-6 flex items-center justify-center">
+                                      <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-sky-400 rounded-full animate-spin"></div>
+                                    </div>
+                                  </div>
                                 </div>
-                                
-                                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden mt-1.5 relative border border-white/5 shadow-inner">
-                                  <div 
-                                    className="h-full rounded-full transition-all duration-300 bg-gradient-to-r from-blue-600/80 to-sky-400/80 relative overflow-hidden"
-                                    style={{ width: `${transfer.progress}%` }}
-                                  >
-                                    {transfer.status === 'transferring' && (
-                                      <>
-                                        <div className="absolute inset-0 w-[200%] h-full animate-wave-flow opacity-30 text-white pointer-events-none">
-                                          <svg className="h-full w-full" viewBox="0 0 200 20" preserveAspectRatio="none">
-                                            <path d="M0,10 C50,15 50,5 100,10 C150,15 150,5 200,10 L200,20 L0,20 Z" fill="currentColor" />
-                                          </svg>
-                                        </div>
-                                        <div className="absolute inset-0 w-[200%] h-full animate-wave-flow-slow opacity-15 text-white pointer-events-none" style={{ animationDirection: 'reverse' }}>
-                                          <svg className="h-full w-full" viewBox="0 0 200 20" preserveAspectRatio="none">
-                                            <path d="M0,10 C50,5 50,15 100,10 C150,5 150,15 200,10 L200,20 L0,20 Z" fill="currentColor" />
-                                          </svg>
-                                        </div>
-                                      </>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Completed / History */}
+                      <div className="space-y-3 flex-1 flex flex-col justify-end">
+                        <h4 className="text-[9px] font-extrabold text-white/35 uppercase tracking-widest pl-1 flex items-center justify-between">
+                          <span>Concluídos ({completedTransfersList.length})</span>
+                          {completedTransfersList.length > 0 && (
+                            <button 
+                              onClick={clearHistory}
+                              className="text-[9px] text-white/30 hover:text-white/60 font-bold lowercase tracking-normal border border-white/5 hover:border-white/10 bg-white/[0.01] hover:bg-white/[0.04] px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                            >
+                              limpar
+                            </button>
+                          )}
+                        </h4>
+
+                        {completedTransfersList.length === 0 ? (
+                          <div className="p-5 rounded-2xl border border-white/5 bg-black/10 text-center flex flex-col items-center justify-center gap-2 min-h-[90px]">
+                            <Check className="w-4 h-4 text-white/20" />
+                            <span className="text-[9px] text-white/30 font-semibold uppercase tracking-wider">Nenhum arquivo transferido</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                            {completedTransfersList.map(transfer => {
+                              const iconConfig = getFileIcon(transfer.name);
+                              const Icon = iconConfig.icon;
+                              
+                              return (
+                                <div key={transfer.id} className="liquid-glass-card p-3 flex items-center gap-3 border border-white/5">
+                                  <div className={cn("p-2 rounded-lg border border-white/10 flex-shrink-0 bg-white/[0.02]", iconConfig.color)}>
+                                    <Icon className="w-4 h-4" />
+                                  </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-baseline">
+                                      <span className="font-bold text-[11px] truncate block text-white/80">{transfer.name}</span>
+                                      <span className="text-[9px] text-white/40 font-medium whitespace-nowrap ml-2">
+                                        {formatBytes(transfer.size)}
+                                      </span>
+                                    </div>
+                                    <div className="text-[9px] text-emerald-400 font-semibold uppercase tracking-wider mt-1">
+                                      Concluído • {transfer.direction === 'sending' ? 'Enviado' : 'Recebido'}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-shrink-0 ml-1">
+                                    {transfer.direction === 'receiving' && transfer.data && (
+                                      <button 
+                                        onClick={() => handleDownload(transfer)}
+                                        className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                        title="Baixar"
+                                      >
+                                        <Download className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    {transfer.direction === 'sending' && (
+                                      <div className="p-1.5 rounded-lg bg-emerald-500/5 text-emerald-400 border border-emerald-500/10">
+                                        <Check className="w-3.5 h-3.5" />
+                                      </div>
                                     )}
                                   </div>
                                 </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
 
-                                <div className="flex justify-between mt-1 text-[9px] font-semibold text-white/35">
-                                  <span className="uppercase tracking-wide">
-                                    {transfer.direction === 'sending' ? 'Enviando' : 'Recebendo'} • {formatSpeed(transfer.speed)}
-                                  </span>
-                                  <span className="text-white/60">
-                                    {transfer.eta !== undefined && transfer.eta > 0 
-                                      ? formatEta(transfer.eta) 
-                                      : `${Math.round(transfer.progress)}%`
-                                    }
-                                  </span>
-                                </div>
-                              </div>
+                    </div>
+                  )}
 
-                              <div className="flex-shrink-0 ml-1">
-                                <div className="w-6 h-6 flex items-center justify-center">
-                                  <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-sky-400 rounded-full animate-spin"></div>
-                                </div>
-                              </div>
+                  {/* SUB-VIEW 2: CLIPBOARD / NOTES CHAT */}
+                  {activeTab === 'chat' && (
+                    <div className="flex-1 flex flex-col justify-between h-full animate-in fade-in duration-300 min-h-[360px]">
+                      
+                      <div className="space-y-3 flex-1 flex flex-col">
+                        <h4 className="text-[9px] font-extrabold text-white/35 uppercase tracking-widest pl-1 mb-2">
+                          Área de Notas ({messages.length})
+                        </h4>
+
+                        {messages.length === 0 ? (
+                          <div className="flex-1 border border-white/5 bg-black/10 rounded-2xl p-6 text-center flex flex-col items-center justify-center gap-3.5">
+                            <div className="p-3.5 bg-white/[0.02] rounded-2xl border border-white/5">
+                              <Clipboard className="w-6 h-6 text-white/20" />
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Completed / History Section */}
-                  <div className="space-y-3 mt-6 flex-1 flex flex-col justify-end">
-                    <h4 className="text-[9px] font-extrabold text-white/35 uppercase tracking-widest pl-1 flex items-center justify-between">
-                      <span>Concluídos ({completedTransfersList.length})</span>
-                      {completedTransfersList.length > 0 && (
-                        <button 
-                          onClick={clearHistory}
-                          className="text-[9px] text-white/30 hover:text-white/60 font-bold lowercase tracking-normal border border-white/5 hover:border-white/10 bg-white/[0.01] hover:bg-white/[0.04] px-2 py-0.5 rounded-md transition-colors cursor-pointer"
-                        >
-                          limpar
-                        </button>
-                      )}
-                    </h4>
-
-                    {completedTransfersList.length === 0 ? (
-                      <div className="p-5 rounded-2xl border border-white/5 bg-black/10 text-center flex flex-col items-center justify-center gap-2 min-h-[90px]">
-                        <Check className="w-4 h-4 text-white/20" />
-                        <span className="text-[9px] text-white/30 font-semibold uppercase tracking-wider">Nenhum arquivo transferido</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                        {completedTransfersList.map(transfer => {
-                          const iconConfig = getFileIcon(transfer.name);
-                          const Icon = iconConfig.icon;
-                          
-                          return (
-                            <div key={transfer.id} className="liquid-glass-card p-3 flex items-center gap-3 border border-white/5">
-                              <div className={cn("p-2 rounded-lg border border-white/10 flex-shrink-0 bg-white/[0.02]", iconConfig.color)}>
-                                <Icon className="w-4 h-4" />
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-baseline">
-                                  <span className="font-bold text-[11px] truncate block text-white/80">{transfer.name}</span>
-                                  <span className="text-[9px] text-white/40 font-medium whitespace-nowrap ml-2">
-                                    {formatBytes(transfer.size)}
-                                  </span>
-                                </div>
-                                <div className="text-[9px] text-emerald-400 font-semibold uppercase tracking-wider mt-1">
-                                  Concluído • {transfer.direction === 'sending' ? 'Enviado' : 'Recebido'}
-                                </div>
-                              </div>
-
-                              <div className="flex-shrink-0 ml-1">
-                                {transfer.direction === 'receiving' && transfer.data && (
-                                  <button 
-                                    onClick={() => handleDownload(transfer)}
-                                    className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                                    title="Baixar"
-                                  >
-                                    <Download className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                                {transfer.direction === 'sending' && (
-                                  <div className="p-1.5 rounded-lg bg-emerald-500/5 text-emerald-400 border border-emerald-500/10">
-                                    <Check className="w-3.5 h-3.5" />
+                            <div className="max-w-[200px] space-y-1">
+                              <span className="text-[10px] text-white/40 block font-bold uppercase tracking-wider">Notas Compartilhadas</span>
+                              <p className="text-[9px] text-white/30 leading-relaxed">
+                                Envie links, senhas ou notas rápidas abaixo. Eles aparecem nos clipboards instantaneamente.
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex-1 space-y-3 max-h-72 overflow-y-auto pr-1.5 custom-scrollbar pb-4">
+                            {messages.map(msg => {
+                              const isSent = msg.direction === 'sending';
+                              const isTextLink = isLink(msg.content);
+                              
+                              return (
+                                <div 
+                                  key={msg.id} 
+                                  className={cn(
+                                    "flex w-full animate-in slide-in-from-bottom-2 duration-200",
+                                    isSent ? "justify-end" : "justify-start"
+                                  )}
+                                >
+                                  <div className={cn(
+                                    "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[11px] border flex flex-col gap-2 relative shadow-md",
+                                    isSent 
+                                      ? "bg-sky-500/10 border-sky-400/20 text-sky-100 rounded-tr-none" 
+                                      : "bg-white/5 border-white/10 text-white/90 rounded-tl-none"
+                                  )}>
+                                    
+                                    <div className="break-all font-medium leading-relaxed">
+                                      {isTextLink ? (
+                                        <a 
+                                          href={msg.content} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer" 
+                                          className="text-sky-400 hover:text-sky-300 underline font-semibold flex items-center gap-1 cursor-pointer"
+                                        >
+                                          {msg.content}
+                                        </a>
+                                      ) : (
+                                        msg.content
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-between gap-6 pt-1 border-t border-white/5">
+                                      <span className="text-[8px] text-white/30 font-medium">
+                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                      
+                                      <button
+                                        onClick={() => copyToClipboard(msg.content, 'Nota copiada!')}
+                                        className="text-[8px] text-white/40 hover:text-sky-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                        title="Copiar para clipboard"
+                                      >
+                                        <Copy className="w-2.5 h-2.5" /> Copiar
+                                      </button>
+                                    </div>
                                   </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                                </div>
+                              );
+                            })}
+                            <div ref={chatBottomRef} />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+
+                      {/* Chat Note Send Input */}
+                      <form onSubmit={submitChat} className="flex gap-2.5 pt-4 border-t border-white/5">
+                        <label htmlFor="chat-input" className="sr-only">Escrever nota...</label>
+                        <input 
+                          id="chat-input"
+                          type="text"
+                          placeholder="Escrever nota ou colar URL..."
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          className="flex-1 liquid-glass-input px-4 py-2.5 text-xs"
+                          required
+                          maxLength={1000}
+                          autoComplete="off"
+                        />
+                        <button 
+                          type="submit"
+                          className="liquid-glass-button p-2.5 flex items-center justify-center cursor-pointer aspect-square"
+                          title="Enviar nota"
+                        >
+                          <Send className="w-4 h-4 text-sky-300" />
+                        </button>
+                      </form>
+
+                    </div>
+                  )}
 
                 </div>
 
