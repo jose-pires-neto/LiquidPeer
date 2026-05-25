@@ -18,7 +18,7 @@ export interface FileTransfer {
 
 export type TransferMessage = 
   | { type: 'file-start'; id: string; name: string; size: number }
-  | { type: 'file-chunk'; chunk: ArrayBuffer }
+  | { type: 'file-chunk'; id: string; chunk: ArrayBuffer }
   | { type: 'file-end'; id: string };
 
 export interface UsePeerOptions {
@@ -35,8 +35,8 @@ export function usePeer(options?: UsePeerOptions) {
   const [connectionStage, setConnectionStage] = useState<string>('');
   const [transfers, setTransfers] = useState<Record<string, FileTransfer>>({});
 
-  const receiveBuffer = useRef<Blob[]>([]);
-  const currentReceivingFile = useRef<{id: string, name: string, size: number, received: number, startTime: number} | null>(null);
+  const receiveBuffers = useRef<Record<string, Blob[]>>({});
+  const receivingFiles = useRef<Record<string, {id: string, name: string, size: number, received: number, startTime: number}>>({});
 
   const onConnectRef = useRef(options?.onConnect);
   const onDisconnectRef = useRef(options?.onDisconnect);
@@ -63,13 +63,15 @@ export function usePeer(options?: UsePeerOptions) {
   const handleIncomingData = useCallback((data: TransferMessage) => {
     if (data.type === 'file-start') {
       const now = Date.now();
-      currentReceivingFile.current = {
+      receivingFiles.current[data.id] = {
         id: data.id,
         name: data.name,
         size: data.size,
         received: 0,
         startTime: now
       };
+      receiveBuffers.current[data.id] = [];
+      
       setTransfers(prev => ({
         ...prev,
         [data.id]: {
@@ -84,23 +86,26 @@ export function usePeer(options?: UsePeerOptions) {
           eta: 0
         }
       }));
-      receiveBuffer.current = [];
     } else if (data.type === 'file-chunk') {
-      if (!currentReceivingFile.current) return;
+      const fileId = data.id;
+      const fileInfo = receivingFiles.current[fileId];
+      if (!fileInfo) return;
       
       const chunk = new Blob([data.chunk]);
-      receiveBuffer.current.push(chunk);
-      currentReceivingFile.current.received += chunk.size;
+      if (!receiveBuffers.current[fileId]) {
+        receiveBuffers.current[fileId] = [];
+      }
+      receiveBuffers.current[fileId].push(chunk);
+      fileInfo.received += chunk.size;
       
       const now = Date.now();
-      const elapsed = (now - currentReceivingFile.current.startTime) / 1000; // seconds
-      const speed = elapsed > 0 ? currentReceivingFile.current.received / elapsed : 0;
-      const remainingBytes = currentReceivingFile.current.size - currentReceivingFile.current.received;
+      const elapsed = (now - fileInfo.startTime) / 1000; // seconds
+      const speed = elapsed > 0 ? fileInfo.received / elapsed : 0;
+      const remainingBytes = fileInfo.size - fileInfo.received;
       const eta = speed > 0 ? remainingBytes / speed : 0;
       
-      const progress = (currentReceivingFile.current.received / currentReceivingFile.current.size) * 100;
+      const progress = (fileInfo.received / fileInfo.size) * 100;
       
-      const fileId = currentReceivingFile.current.id;
       setTransfers(prev => ({
         ...prev,
         [fileId]: {
@@ -111,10 +116,11 @@ export function usePeer(options?: UsePeerOptions) {
         }
       }));
     } else if (data.type === 'file-end') {
-      if (!currentReceivingFile.current) return;
+      const fileId = data.id;
+      const fileInfo = receivingFiles.current[fileId];
+      if (!fileInfo) return;
       
-      const fileId = currentReceivingFile.current.id;
-      const fileBlob = new Blob(receiveBuffer.current);
+      const fileBlob = new Blob(receiveBuffers.current[fileId] || []);
       setTransfers(prev => ({
         ...prev,
         [fileId]: {
@@ -127,8 +133,8 @@ export function usePeer(options?: UsePeerOptions) {
         }
       }));
       
-      currentReceivingFile.current = null;
-      receiveBuffer.current = [];
+      delete receivingFiles.current[fileId];
+      delete receiveBuffers.current[fileId];
     }
   }, []);
 
@@ -296,6 +302,7 @@ export function usePeer(options?: UsePeerOptions) {
       const chunk = e.target.result as ArrayBuffer;
       connection.send({
         type: 'file-chunk',
+        id: fileId,
         chunk
       });
 
@@ -359,6 +366,8 @@ export function usePeer(options?: UsePeerOptions) {
     setPeer(null);
     setConnection(null);
     setTransfers({});
+    receivingFiles.current = {};
+    receiveBuffers.current = {};
     onDisconnectRef.current?.();
   }, [connection, peer]);
 
