@@ -22,6 +22,9 @@ import {
   File as FileIcon,
   Clipboard
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Highlight, themes } from 'prism-react-renderer';
 import { usePeer, type FileTransfer } from './hooks/usePeer';
 import { cn } from './lib/utils';
 
@@ -35,9 +38,9 @@ interface ScannerProps {
 // Synthetic Audio Feedback using Web Audio API (0KB Bandwidth)
 const playDropletSound = () => {
   try {
-    const AudioContext = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
+    const AudioContextClass = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     
@@ -61,9 +64,9 @@ const playDropletSound = () => {
 
 const playBubbleSound = () => {
   try {
-    const AudioContext = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
+    const AudioContextClass = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     
@@ -86,9 +89,9 @@ const playBubbleSound = () => {
 
 const playFlowSound = () => {
   try {
-    const AudioContext = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
+    const AudioContextClass = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
     
     for (let i = 0; i < 4; i++) {
       const time = ctx.currentTime + i * 0.05;
@@ -195,6 +198,110 @@ function QRScanner({ onScan, onClose }: ScannerProps) {
   );
 }
 
+interface CodeBlockProps {
+  code: string;
+  language: string;
+}
+
+const CodeBlock: React.FC<CodeBlockProps> = ({ code, language }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative my-3 rounded-xl overflow-hidden border border-white/10 bg-black/45 shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.7)] text-left font-mono w-full">
+      {/* Code block header */}
+      <div className="flex justify-between items-center px-4 py-1.5 bg-white/[0.03] border-b border-white/5 text-[9px] font-bold text-white/50 tracking-wider select-none">
+        <span className="uppercase">{language || 'text'}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1 hover:text-sky-300 transition-colors cursor-pointer"
+        >
+          {copied ? (
+            <>
+              <Check className="w-2.5 h-2.5 text-emerald-400" />
+              <span className="text-emerald-400">Copiado!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-2.5 h-2.5" />
+              <span>Copiar</span>
+            </>
+          )}
+        </button>
+      </div>
+      
+      {/* Code block tokens highlight */}
+      <div className="p-4 overflow-x-auto text-[10px] leading-relaxed custom-scrollbar max-h-96">
+        <Highlight theme={themes.vsDark} code={code} language={language}>
+          {({ className, style, tokens, getLineProps, getTokenProps }) => (
+            <pre className={className} style={{ ...style, background: 'transparent', margin: 0, padding: 0 }}>
+              {tokens.map((line, i) => (
+                <div key={i} {...getLineProps({ line, key: i })}>
+                  {line.map((token, key) => (
+                    <span key={key} {...getTokenProps({ token, key })} />
+                  ))}
+                </div>
+              ))}
+            </pre>
+          )}
+        </Highlight>
+      </div>
+    </div>
+  );
+};
+
+const detectAndWrapCode = (text: string): string => {
+  const trimmed = text.trim();
+  if (trimmed.startsWith('```') && trimmed.endsWith('```')) {
+    return text;
+  }
+
+  const lines = trimmed.split('\n');
+  if (lines.length >= 2) {
+    const codeKeywords = [
+      /^\s*import\s+.*\s+from\s+['"].*['"]/,
+      /^\s*import\s+\{.*\}\s+from\s+['"].*['"]/,
+      /^\s*const\s+\w+\s*=/,
+      /^\s*let\s+\w+\s*=/,
+      /^\s*var\s+\w+\s*=/,
+      /^\s*function\s+\w+\s*\(/,
+      /^\s*class\s+\w+/,
+      /^\s*public\s+class\s+\w+/,
+      /^\s*def\s+\w+\(.*\):/,
+      /^\s*if\s*\(.*\)\s*\{/,
+      /^\s*for\s*\(.*\)\s*\{/,
+      /^\s*html\s*,\s*body\s*\{/,
+      /^\s*package\s+\w+/,
+      /^\s*using\s+\w+/,
+      /^\s*#include\s+<.*>/
+    ];
+
+    const hasKeywords = lines.some(line => codeKeywords.some(regex => regex.test(line)));
+    const hasSemicolonsAndBraces = lines.filter(line => line.includes(';') || line.includes('{') || line.includes('}')).length >= lines.length * 0.25;
+
+    if (hasKeywords || hasSemicolonsAndBraces) {
+      let lang = '';
+      if (lines.some(line => /import\s+.*from|const\s+.*=/.test(line))) {
+        lang = 'typescript';
+      } else if (lines.some(line => /def\s+\w+\(/.test(line))) {
+        lang = 'python';
+      } else if (lines.some(line => /#include/.test(line))) {
+        lang = 'cpp';
+      } else if (lines.some(line => /html|body|div|\.[\w-]+\s*\{/.test(line))) {
+        lang = 'css';
+      }
+      
+      return `\`\`\`${lang}\n${text}\n\`\`\``;
+    }
+  }
+  return text;
+};
+
 function App() {
   const [view, setView] = useState<ViewState>('home');
   const [joinId, setJoinId] = useState('');
@@ -228,6 +335,28 @@ function App() {
   
   const inputRef = useRef<HTMLInputElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-expand textarea height
+  useEffect(() => {
+    if (chatInputRef.current) {
+      chatInputRef.current.style.height = 'auto';
+      chatInputRef.current.style.height = `${Math.min(chatInputRef.current.scrollHeight, 120)}px`;
+    }
+  }, [chatInput]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // Prevents adding a newline character
+      const trimmed = chatInput.trim();
+      if (trimmed) {
+        const formattedText = detectAndWrapCode(trimmed);
+        sendText(formattedText);
+        setChatInput('');
+        playBubbleSound();
+      }
+    }
+  };
 
   const { 
     peerId, 
@@ -464,19 +593,12 @@ function App() {
 
   const submitChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
-    sendText(chatInput.trim());
+    const trimmed = chatInput.trim();
+    if (!trimmed) return;
+    const formattedText = detectAndWrapCode(trimmed);
+    sendText(formattedText);
     setChatInput('');
     playBubbleSound();
-  };
-
-  const isLink = (text: string) => {
-    try {
-      new URL(text);
-      return true;
-    } catch {
-      return text.startsWith('http://') || text.startsWith('https://');
-    }
   };
 
   const activeTransfer = transfers.find(t => t.status === 'transferring');
@@ -1164,7 +1286,6 @@ function App() {
                           <div className="flex-1 space-y-3 max-h-72 overflow-y-auto pr-1.5 custom-scrollbar pb-4">
                             {messages.map(msg => {
                               const isSent = msg.direction === 'sending';
-                              const isTextLink = isLink(msg.content);
                               
                               return (
                                 <div 
@@ -1181,19 +1302,64 @@ function App() {
                                       : "bg-white/5 border-white/10 text-white/90 rounded-tl-none"
                                   )}>
                                     
-                                    <div className="break-all font-medium leading-relaxed">
-                                      {isTextLink ? (
-                                        <a 
-                                          href={msg.content} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer" 
-                                          className="text-sky-400 hover:text-sky-300 underline font-semibold flex items-center gap-1 cursor-pointer"
-                                        >
-                                          {msg.content}
-                                        </a>
-                                      ) : (
-                                        msg.content
-                                      )}
+                                    <div className="break-words font-medium leading-relaxed w-full whitespace-pre-wrap">
+                                      <ReactMarkdown 
+                                        remarkPlugins={[remarkGfm]} 
+                                        components={{
+                                          a({ href, children }) {
+                                            return (
+                                              <a 
+                                                href={href} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="text-sky-400 hover:text-sky-300 underline font-semibold cursor-pointer break-all"
+                                              >
+                                                {children}
+                                              </a>
+                                            );
+                                          },
+                                          code({ className, children, ...props }) {
+                                            const match = /language-(\w+)/.exec(className || '');
+                                            const codeString = String(children).replace(/\n$/, '');
+                                            const isInline = !className && !String(children).includes('\n');
+
+                                            if (!isInline) {
+                                              return (
+                                                <CodeBlock 
+                                                  code={codeString} 
+                                                  language={match ? match[1] : 'text'} 
+                                                />
+                                              );
+                                            }
+
+                                            return (
+                                              <code className="font-mono bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-sky-300 text-[10px]" {...props}>
+                                                {children}
+                                              </code>
+                                            );
+                                          },
+                                          p({ children }) {
+                                            return <p className="mb-1 last:mb-0 leading-relaxed whitespace-pre-wrap">{children}</p>;
+                                          },
+                                          ul({ children }) {
+                                            return <ul className="list-disc pl-4 mb-2 last:mb-0">{children}</ul>;
+                                          },
+                                          ol({ children }) {
+                                            return <ol className="list-decimal pl-4 mb-2 last:mb-0">{children}</ol>;
+                                          },
+                                          li({ children }) {
+                                            return <li className="mb-0.5">{children}</li>;
+                                          },
+                                          h1({ children }) { return <h1 className="text-sm font-extrabold text-white mt-2 mb-1">{children}</h1>; },
+                                          h2({ children }) { return <h2 className="text-xs font-bold text-white mt-2 mb-1">{children}</h2>; },
+                                          h3({ children }) { return <h3 className="text-xs font-semibold text-white mt-1.5 mb-1">{children}</h3>; },
+                                          blockquote({ children }) {
+                                            return <blockquote className="border-l-2 border-white/20 pl-2 text-white/60 italic my-1.5">{children}</blockquote>;
+                                          }
+                                        }}
+                                      >
+                                        {msg.content}
+                                      </ReactMarkdown>
                                     </div>
                                     
                                     <div className="flex items-center justify-between gap-6 pt-1 border-t border-white/5">
@@ -1219,22 +1385,24 @@ function App() {
                       </div>
 
                       {/* Chat Note Send Input */}
-                      <form onSubmit={submitChat} className="flex gap-2.5 pt-4 border-t border-white/5">
+                      <form onSubmit={submitChat} className="flex gap-2.5 pt-4 border-t border-white/5 items-end">
                         <label htmlFor="chat-input" className="sr-only">Escrever nota...</label>
-                        <input 
+                        <textarea 
                           id="chat-input"
-                          type="text"
-                          placeholder="Escrever nota ou colar URL..."
+                          ref={chatInputRef}
+                          placeholder="Escrever nota (Markdown) ou colar URL..."
                           value={chatInput}
                           onChange={(e) => setChatInput(e.target.value)}
-                          className="flex-1 liquid-glass-input px-4 py-2.5 text-xs"
+                          onKeyDown={handleKeyDown}
+                          className="flex-1 liquid-glass-input px-4 py-2 text-xs resize-none overflow-y-auto custom-scrollbar h-[38px] min-h-[38px]"
+                          rows={1}
                           required
                           maxLength={1000}
                           autoComplete="off"
                         />
                         <button 
                           type="submit"
-                          className="liquid-glass-button p-2.5 flex items-center justify-center cursor-pointer aspect-square"
+                          className="liquid-glass-button p-2.5 flex items-center justify-center cursor-pointer aspect-square h-[38px] w-[38px] flex-shrink-0"
                           title="Enviar nota"
                         >
                           <Send className="w-4 h-4 text-sky-300" />
