@@ -20,9 +20,9 @@ export function ChatPanel({ messages, onSendText, showToast }: ChatPanelProps) {
   }, [messages.length]);
 
   return (
-    <div className="flex-1 flex flex-col justify-between h-full animate-in fade-in duration-300 min-h-[360px]">
+    <div className="flex-1 flex flex-col justify-between h-full animate-in fade-in duration-300 min-h-[280px] sm:min-h-[340px] lg:min-h-[400px]">
       <div className="space-y-3 flex-1 flex flex-col">
-        <h4 className="text-[9px] font-extrabold text-white/35 uppercase tracking-widest pl-1 mb-2">
+        <h4 className="text-[10px] font-extrabold text-white/35 uppercase tracking-widest pl-1 mb-2">
           Área de Notas ({messages.length})
         </h4>
 
@@ -32,16 +32,16 @@ export function ChatPanel({ messages, onSendText, showToast }: ChatPanelProps) {
               <Clipboard className="w-6 h-6 text-white/20" />
             </div>
             <div className="max-w-[200px] space-y-1">
-              <span className="text-[10px] text-white/40 block font-bold uppercase tracking-wider">
+              <span className="text-[11px] text-white/40 block font-bold uppercase tracking-wider">
                 Notas Compartilhadas
               </span>
-              <p className="text-[9px] text-white/30 leading-relaxed">
+              <p className="text-[10px] text-white/30 leading-relaxed">
                 Envie links, senhas ou notas rápidas abaixo. Eles aparecem nos clipboards instantaneamente.
               </p>
             </div>
           </div>
         ) : (
-          <div className="flex-1 space-y-3 max-h-72 overflow-y-auto pr-1.5 custom-scrollbar pb-4">
+          <div className="flex-1 space-y-3 max-h-52 sm:max-h-64 lg:max-h-80 overflow-y-auto pr-1.5 custom-scrollbar pb-4">
             {messages.map(msg => (
               <ChatMessage key={msg.id} message={msg} showToast={showToast} />
             ))}

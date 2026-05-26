@@ -115,18 +115,18 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative select-none overflow-hidden">
+    <div className="min-h-dvh flex items-center justify-center safe-area-container relative select-none overflow-hidden">
       {/* Liquid Ambient Glow Blobs */}
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-sky-500/10 rounded-full blur-[120px] animate-glow-1 pointer-events-none z-0" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[140px] animate-glow-2 pointer-events-none z-0" />
+      <div className="absolute top-1/4 left-1/4 w-48 sm:w-72 h-48 sm:h-72 bg-sky-500/10 rounded-full blur-[80px] sm:blur-[120px] animate-glow-1 pointer-events-none z-0" />
+      <div className="absolute bottom-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-blue-600/10 rounded-full blur-[100px] sm:blur-[140px] animate-glow-2 pointer-events-none z-0" />
 
       {/* Floating Glass Toasts */}
       <ToastContainer toasts={toasts} />
 
       <main
         className={cn(
-          "w-full z-10 liquid-glass-panel p-6 md:p-8 transition-all duration-500 relative",
-          view === 'transfer' ? "max-w-4xl" : "max-w-md",
+          "w-full z-10 liquid-glass-panel p-4 sm:p-6 lg:p-8 transition-all duration-500 relative",
+          view === 'transfer' ? "max-w-4xl lg:max-w-5xl" : "max-w-md",
         )}
       >
         {peerState === 'connecting' && (
@@ -152,7 +152,7 @@ function App() {
         )}
 
         {/* Content Section Router */}
-        <div className="relative min-h-[300px] flex flex-col justify-between">
+        <div className="relative min-h-[260px] sm:min-h-[320px] flex flex-col justify-between">
           {showScanner && (
             <QRScanner
               onScan={(code) => {

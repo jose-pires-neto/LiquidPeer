@@ -39,7 +39,7 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
   return (
     <div
       className={cn(
-        "border border-dashed rounded-2xl flex flex-col items-center justify-center min-h-[190px] p-6 transition-all duration-300 relative overflow-hidden",
+        "border border-dashed rounded-2xl flex flex-col items-center justify-center min-h-[140px] sm:min-h-[170px] lg:min-h-[200px] p-4 sm:p-6 transition-all duration-300 relative overflow-hidden",
         isDragging
           ? "border-sky-400 bg-sky-400/5 scale-[1.01]"
           : "border-white/5 bg-black/20 hover:bg-white/[0.01]",
@@ -72,8 +72,8 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
           <div className="p-3 rounded-2xl bg-white/[0.02] mb-3.5 border border-white/5 shadow-inner">
             <UploadCloud className="w-7 h-7 text-white/35 animate-float" />
           </div>
-          <h3 className="text-xs font-semibold mb-1 text-white/80">Arraste arquivos aqui</h3>
-          <p className="text-[9px] text-white/35">ou clique para navegar</p>
+          <h3 className="text-sm sm:text-xs font-semibold mb-1 text-white/80">Arraste arquivos aqui</h3>
+          <p className="text-[10px] text-white/35">ou clique para navegar</p>
         </div>
       )}
     </div>

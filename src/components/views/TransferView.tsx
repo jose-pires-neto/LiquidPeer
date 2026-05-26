@@ -28,7 +28,7 @@ export function TransferView({
   // Force activeTab switch on desktop resize
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768 && activeTab === 'transfer') {
+      if (window.innerWidth >= 1024 && activeTab === 'transfer') {
         setActiveTab('files');
       }
     };
@@ -72,11 +72,11 @@ export function TransferView({
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-300 w-full">
       {/* Mobile Tab Bar */}
-      <div className="flex md:hidden items-center justify-center p-1 bg-white/[0.03] border border-white/5 rounded-2xl mb-5 shadow-inner">
+      <div className="flex lg:hidden items-center justify-center p-1 bg-white/[0.03] border border-white/5 rounded-2xl mb-3 sm:mb-5 shadow-inner">
         <button
           onClick={() => setActiveTab('transfer')}
           className={cn(
-            "flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300 cursor-pointer",
+            "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 cursor-pointer",
             activeTab === 'transfer'
               ? "bg-white/10 text-sky-300 shadow-sm border border-white/5"
               : "text-white/40 hover:text-white/60",
@@ -87,7 +87,7 @@ export function TransferView({
         <button
           onClick={() => setActiveTab('files')}
           className={cn(
-            "flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300 relative cursor-pointer",
+            "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 relative cursor-pointer",
             activeTab === 'files'
               ? "bg-white/10 text-sky-300 shadow-sm border border-white/5"
               : "text-white/40 hover:text-white/60",
@@ -103,7 +103,7 @@ export function TransferView({
         <button
           onClick={() => setActiveTab('chat')}
           className={cn(
-            "flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300 relative cursor-pointer",
+            "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 relative cursor-pointer",
             activeTab === 'chat'
               ? "bg-white/10 text-sky-300 shadow-sm border border-white/5"
               : "text-white/40 hover:text-white/60",
@@ -119,12 +119,12 @@ export function TransferView({
       </div>
 
       {/* Grid System */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         {/* COLUMN 1: Connection Tube & Upload Drop Zone */}
         <div
           className={cn(
-            "space-y-5 flex flex-col justify-between transition-all duration-300",
-            activeTab === 'transfer' ? "flex" : "hidden md:flex",
+            "space-y-3 sm:space-y-5 flex flex-col justify-between transition-all duration-300",
+            activeTab === 'transfer' ? "flex" : "hidden lg:flex",
           )}
         >
           <ConnectionTube activeTransfer={activeTransfer} isSending={isSending ?? false} />
@@ -143,12 +143,12 @@ export function TransferView({
         {/* COLUMN 2: Files & Chat */}
         <div
           className={cn(
-            "flex-1 flex flex-col h-full md:border-l md:border-white/5 md:pl-8 transition-all duration-300",
-            activeTab !== 'transfer' ? "flex" : "hidden md:flex",
+            "flex-1 flex flex-col h-full lg:border-l lg:border-white/5 lg:pl-8 transition-all duration-300",
+            activeTab !== 'transfer' ? "flex" : "hidden lg:flex",
           )}
         >
           {/* Desktop Tab Header */}
-          <div className="hidden md:flex items-center justify-between border-b border-white/5 pb-3 mb-5">
+          <div className="hidden lg:flex items-center justify-between border-b border-white/5 pb-3 mb-5">
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('files')}

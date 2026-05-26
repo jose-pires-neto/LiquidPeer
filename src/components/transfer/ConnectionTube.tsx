@@ -9,12 +9,12 @@ interface ConnectionTubeProps {
 
 export function ConnectionTube({ activeTransfer, isSending }: ConnectionTubeProps) {
   return (
-    <div className="flex items-center justify-between w-full px-4 py-3.5 liquid-glass-card border border-white/5">
+    <div className="flex items-center justify-between w-full px-3 py-3 sm:px-4 sm:py-3.5 liquid-glass-card border border-white/5">
       <div className="flex flex-col items-center gap-1.5">
-        <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
           <Smartphone className="w-5.5 h-5.5 text-white/70" />
         </div>
-        <span className="text-[9px] font-bold text-white/50 tracking-wider">Meu Device</span>
+        <span className="text-[10px] font-bold text-white/50 tracking-wider">Meu Device</span>
       </div>
 
       <div className="flex-1 px-3 relative flex items-center justify-center">
@@ -47,10 +47,10 @@ export function ConnectionTube({ activeTransfer, isSending }: ConnectionTubeProp
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
-        <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
           <Laptop className="w-5.5 h-5.5 text-white/70" />
         </div>
-        <span className="text-[9px] font-bold text-white/50 tracking-wider">Remoto</span>
+        <span className="text-[10px] font-bold text-white/50 tracking-wider">Remoto</span>
       </div>
     </div>
   );
