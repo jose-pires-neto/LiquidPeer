@@ -10,18 +10,18 @@ interface HeaderProps {
 
 export function Header({ peerState, onDisconnect, onLogoClick }: HeaderProps) {
   return (
-    <header className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
+    <header className="flex items-center justify-between mb-4 pb-3 sm:mb-6 sm:pb-4 border-b border-white/5">
       <div
         className="flex items-center gap-2.5 cursor-pointer"
         onClick={onLogoClick}
         role="button"
       >
-        <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
           <Share2 className="text-sky-300 w-4.5 h-4.5" />
         </div>
         <div>
-          <h1 className="text-base font-bold text-white tracking-tight">LiquidPeer</h1>
-          <p className="text-[9px] text-white/30 font-medium">Compartilhamento Líquido</p>
+          <h1 className="text-sm sm:text-base font-bold text-white tracking-tight">LiquidPeer</h1>
+          <p className="text-[10px] text-white/30 font-medium">Compartilhamento Líquido</p>
         </div>
       </div>
 
@@ -39,7 +39,7 @@ export function Header({ peerState, onDisconnect, onLogoClick }: HeaderProps) {
                     : "bg-white/20",
             )}
           />
-          <span className="text-[9px] font-semibold text-white/60 tracking-wide uppercase">
+          <span className="text-[10px] font-semibold text-white/60 tracking-wide uppercase">
             {peerState === 'connected'
               ? 'Conectado'
               : peerState === 'connecting'

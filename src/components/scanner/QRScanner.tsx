@@ -57,17 +57,17 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   return (
     <div className="flex flex-col items-center justify-between h-full space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-0.5">
-        <h2 className="text-sm font-bold text-white">Escanear QR Code</h2>
-        <p className="text-white/40 text-[10px]">Posicione o QR Code no centro da tela.</p>
+        <h2 className="text-sm sm:text-base font-bold text-white">Escanear QR Code</h2>
+        <p className="text-white/40 text-[11px]">Posicione o QR Code no centro da tela.</p>
       </div>
 
       {error ? (
-        <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 text-center space-y-2 max-w-[240px]">
+        <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 text-center space-y-2 max-w-[260px] sm:max-w-[280px]">
           <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
           <p className="text-rose-200 text-[11px] leading-relaxed">{error}</p>
         </div>
       ) : (
-        <div className="relative w-full max-w-[240px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-black/50 shadow-2xl flex items-center justify-center">
+        <div className="relative w-full max-w-[220px] sm:max-w-[260px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-black/50 shadow-2xl flex items-center justify-center">
           <div className="absolute inset-5 border border-white/5 rounded-lg pointer-events-none z-20">
             <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t border-l border-sky-400" />
             <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t border-r border-sky-400" />
@@ -80,7 +80,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
 
       <button
         onClick={onClose}
-        className="text-[10px] text-white/40 hover:text-white/80 flex items-center gap-1 transition-colors cursor-pointer"
+        className="text-[11px] text-white/40 hover:text-white/80 flex items-center gap-1 transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-3.5 h-3.5" /> Voltar
       </button>
