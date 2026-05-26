@@ -29,13 +29,17 @@ export function ChatMessage({ message, showToast }: ChatMessageProps) {
     >
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[11px] border flex flex-col gap-2 relative shadow-md",
+          "max-w-[85%] px-4 py-3 text-[11px] border flex flex-col gap-2 relative shadow-[0_8px_20px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_2px_rgba(0,0,0,0.1)] backdrop-blur-md overflow-hidden",
           isSent
-            ? "bg-sky-500/10 border-sky-400/20 text-sky-100 rounded-tr-none"
-            : "bg-white/5 border-white/10 text-white/90 rounded-tl-none",
+            ? "bg-gradient-to-br from-sky-500/12 via-sky-500/3 to-sky-600/8 border-sky-400/25 text-sky-100 rounded-[20px_20px_4px_20px]"
+            : "bg-gradient-to-br from-white/8 via-white/[0.01] to-white/4 border-white/15 text-white/90 rounded-[20px_20px_20px_4px]",
         )}
       >
-        <div className="break-words font-medium leading-relaxed w-full whitespace-pre-wrap">
+        {/* Glossy highlight layer */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] to-transparent pointer-events-none" />
+        <div className="absolute top-0 left-3 right-3 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
+        <div className="break-words font-medium leading-relaxed w-full whitespace-pre-wrap relative z-10">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -108,7 +112,7 @@ export function ChatMessage({ message, showToast }: ChatMessageProps) {
           </ReactMarkdown>
         </div>
 
-        <div className="flex items-center justify-between gap-6 pt-1 border-t border-white/5">
+        <div className="flex items-center justify-between gap-6 pt-1.5 border-t border-white/5 relative z-10">
           <span className="text-[8px] text-white/30 font-medium">
             {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
