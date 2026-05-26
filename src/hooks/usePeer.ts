@@ -1,37 +1,26 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import Peer, { type DataConnection } from 'peerjs';
+import type {
+  PeerState,
+  FileTransfer,
+  PeerMessage,
+  TransferMessage,
+  UsePeerOptions,
+} from '../types';
+import {
+  CHUNK_SIZE,
+  CONNECTION_TIMEOUT_MS,
+  STAGE_TRANSITION_DELAY_MS,
+} from '../constants';
 
-export type PeerState = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type { FileTransfer, PeerMessage };
 
-export interface FileTransfer {
+interface ReceivingFileInfo {
   id: string;
   name: string;
   size: number;
-  progress: number;
-  status: 'pending' | 'transferring' | 'completed' | 'error';
-  direction: 'sending' | 'receiving';
-  data?: Blob;
-  speed?: number; // bytes per second
-  eta?: number;   // seconds remaining
-  startTime?: number;
-}
-
-export interface PeerMessage {
-  id: string;
-  content: string;
-  direction: 'sending' | 'receiving';
-  timestamp: number;
-}
-
-export type TransferMessage = 
-  | { type: 'file-start'; id: string; name: string; size: number }
-  | { type: 'file-chunk'; id: string; chunk: ArrayBuffer }
-  | { type: 'file-end'; id: string }
-  | { type: 'text'; id: string; content: string; timestamp: number };
-
-export interface UsePeerOptions {
-  onConnect?: () => void;
-  onDisconnect?: () => void;
+  received: number;
+  startTime: number;
 }
 
 export function usePeer(options?: UsePeerOptions) {
@@ -45,15 +34,14 @@ export function usePeer(options?: UsePeerOptions) {
   const [messages, setMessages] = useState<PeerMessage[]>([]);
 
   const receiveBuffers = useRef<Record<string, Blob[]>>({});
-  const receivingFiles = useRef<Record<string, {id: string, name: string, size: number, received: number, startTime: number}>>({});
+  const receivingFiles = useRef<Record<string, ReceivingFileInfo>>({});
 
   const onConnectRef = useRef(options?.onConnect);
   const onDisconnectRef = useRef(options?.onDisconnect);
-  
+
   const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingConnRef = useRef<DataConnection | null>(null);
 
-  // Clear timeout on unmount
   useEffect(() => {
     return () => {
       if (connectionTimeoutRef.current) {
@@ -62,13 +50,11 @@ export function usePeer(options?: UsePeerOptions) {
     };
   }, []);
 
-  // Keep callbacks up-to-date to avoid dependency changes
   useEffect(() => {
     onConnectRef.current = options?.onConnect;
     onDisconnectRef.current = options?.onDisconnect;
   }, [options?.onConnect, options?.onDisconnect]);
 
-  // Handle incoming chunks and progress tracking
   const handleIncomingData = useCallback((data: TransferMessage) => {
     if (data.type === 'file-start') {
       const now = Date.now();
@@ -77,10 +63,10 @@ export function usePeer(options?: UsePeerOptions) {
         name: data.name,
         size: data.size,
         received: 0,
-        startTime: now
+        startTime: now,
       };
       receiveBuffers.current[data.id] = [];
-      
+
       setTransfers(prev => ({
         ...prev,
         [data.id]: {
@@ -92,296 +78,295 @@ export function usePeer(options?: UsePeerOptions) {
           direction: 'receiving',
           startTime: now,
           speed: 0,
-          eta: 0
-        }
+          eta: 0,
+        },
       }));
     } else if (data.type === 'file-chunk') {
-      const fileId = data.id;
-      const fileInfo = receivingFiles.current[fileId];
+      const fileInfo = receivingFiles.current[data.id];
       if (!fileInfo) return;
-      
+
       const chunk = new Blob([data.chunk]);
-      if (!receiveBuffers.current[fileId]) {
-        receiveBuffers.current[fileId] = [];
+      if (!receiveBuffers.current[data.id]) {
+        receiveBuffers.current[data.id] = [];
       }
-      receiveBuffers.current[fileId].push(chunk);
+      receiveBuffers.current[data.id].push(chunk);
       fileInfo.received += chunk.size;
-      
+
       const now = Date.now();
-      const elapsed = (now - fileInfo.startTime) / 1000; // seconds
+      const elapsed = (now - fileInfo.startTime) / 1000;
       const speed = elapsed > 0 ? fileInfo.received / elapsed : 0;
       const remainingBytes = fileInfo.size - fileInfo.received;
       const eta = speed > 0 ? remainingBytes / speed : 0;
-      
       const progress = (fileInfo.received / fileInfo.size) * 100;
-      
+
       setTransfers(prev => ({
         ...prev,
-        [fileId]: {
-          ...prev[fileId],
+        [data.id]: {
+          ...prev[data.id],
           progress,
           speed,
-          eta
-        }
+          eta,
+        },
       }));
     } else if (data.type === 'file-end') {
-      const fileId = data.id;
-      const fileInfo = receivingFiles.current[fileId];
+      const fileInfo = receivingFiles.current[data.id];
       if (!fileInfo) return;
-      
-      const fileBlob = new Blob(receiveBuffers.current[fileId] || []);
+
+      const fileBlob = new Blob(receiveBuffers.current[data.id] || []);
       setTransfers(prev => ({
         ...prev,
-        [fileId]: {
-          ...prev[fileId],
+        [data.id]: {
+          ...prev[data.id],
           progress: 100,
           status: 'completed',
           data: fileBlob,
           speed: 0,
-          eta: 0
-        }
+          eta: 0,
+        },
       }));
-      
-      delete receivingFiles.current[fileId];
-      delete receiveBuffers.current[fileId];
+
+      delete receivingFiles.current[data.id];
+      delete receiveBuffers.current[data.id];
     } else if (data.type === 'text') {
-      setMessages(prev => [...prev, {
-        id: data.id,
-        content: data.content,
-        direction: 'receiving',
-        timestamp: data.timestamp
-      }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: data.id,
+          content: data.content,
+          direction: 'receiving',
+          timestamp: data.timestamp,
+        },
+      ]);
     }
   }, []);
 
-  // Set up connection event handlers
-  const setupConnection = useCallback((conn: DataConnection) => {
-    conn.on('open', () => {
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
-      }
-      pendingConnRef.current = null;
-      setConnection(conn);
-      setState('connected');
-      onConnectRef.current?.();
-    });
-
-    conn.on('data', (data: unknown) => {
-      handleIncomingData(data as TransferMessage);
-    });
-
-    conn.on('close', () => {
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
-      }
-      pendingConnRef.current = null;
-      setConnection(null);
-      setState('disconnected');
-      onDisconnectRef.current?.();
-    });
-    
-    conn.on('error', (err) => {
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
-      }
-      pendingConnRef.current = null;
-      setError(err.message);
-      setState('error');
-    });
-  }, [handleIncomingData]);
-
-  // Initialize Peer
-  const initializePeer = useCallback((id?: string) => {
-    // If a peer already exists, destroy it before creating a new one to prevent orphaned connections
-    if (peer) {
-      peer.destroy();
-    }
-
-    const newPeer = id ? new Peer(id) : new Peer();
-    
-    newPeer.on('open', (id) => {
-      setPeerId(id);
-      setPeer(newPeer);
-    });
-
-    newPeer.on('connection', (conn) => {
-      setupConnection(conn);
-    });
-
-    newPeer.on('error', (err) => {
-      setError(err.message);
-      setState('error');
-    });
-
-    return newPeer;
-  }, [peer, setupConnection]);
-
-  // Connect to target peer with asynchronous initialization safety
-  const connectToPeer = useCallback((targetId: string) => {
-    let activePeer = peer;
-    
-    setState('connecting');
-    setError(null);
-    setConnectionStage('Buscando dispositivo...');
-
-    if (connectionTimeoutRef.current) {
-      clearTimeout(connectionTimeoutRef.current);
-    }
-    
-    const performConnect = (p: Peer) => {
-      // Transition stage message after 1.5 seconds to "Estabelecendo canal seguro..."
-      const transitionTimer = setTimeout(() => {
-        setConnectionStage('Estabelecendo canal seguro...');
-      }, 1500);
-
-      const conn = p.connect(targetId, { reliable: true });
-      pendingConnRef.current = conn;
-      setupConnection(conn);
-
-      // Start 12-second timeout
-      connectionTimeoutRef.current = setTimeout(() => {
-        clearTimeout(transitionTimer);
-        if (pendingConnRef.current === conn) {
-          conn.close();
-          pendingConnRef.current = null;
-          setError('Não foi possível encontrar o dispositivo. Verifique se o código está correto.');
-          setState('error');
-        }
-      }, 12000);
-    };
-
-    if (!activePeer) {
-      activePeer = initializePeer();
-    }
-
-    if (activePeer.open) {
-      performConnect(activePeer);
-    } else {
-      activePeer.once('open', () => {
-        performConnect(activePeer!);
-      });
-      activePeer.once('error', (err) => {
+  const setupConnection = useCallback(
+    (conn: DataConnection) => {
+      conn.on('open', () => {
         if (connectionTimeoutRef.current) {
           clearTimeout(connectionTimeoutRef.current);
           connectionTimeoutRef.current = null;
         }
+        pendingConnRef.current = null;
+        setConnection(conn);
+        setState('connected');
+        onConnectRef.current?.();
+      });
+
+      conn.on('data', (data: unknown) => {
+        handleIncomingData(data as TransferMessage);
+      });
+
+      conn.on('close', () => {
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
+        pendingConnRef.current = null;
+        setConnection(null);
+        setState('disconnected');
+        onDisconnectRef.current?.();
+      });
+
+      conn.on('error', (err) => {
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
+        pendingConnRef.current = null;
         setError(err.message);
         setState('error');
       });
-    }
-  }, [peer, initializePeer, setupConnection]);
+    },
+    [handleIncomingData],
+  );
 
-  // Slice and transmit file
-  const sendFile = useCallback(async (file: File) => {
-    if (!connection || state !== 'connected') return;
-
-    const fileId = Math.random().toString(36).substring(7);
-    const startTime = Date.now();
-    setTransfers(prev => ({
-      ...prev,
-      [fileId]: {
-        id: fileId,
-        name: file.name,
-        size: file.size,
-        progress: 0,
-        status: 'transferring',
-        direction: 'sending',
-        startTime,
-        speed: 0,
-        eta: 0
+  const initializePeer = useCallback(
+    (id?: string) => {
+      if (peer) {
+        peer.destroy();
       }
-    }));
 
-    connection.send({
-      type: 'file-start',
-      id: fileId,
-      name: file.name,
-      size: file.size
-    });
+      const newPeer = id ? new Peer(id) : new Peer();
 
-    const chunkSize = 16384; // 16KB chunk size (reliable for WebRTC)
-    let offset = 0;
-
-    const reader = new FileReader();
-
-    const readNextChunk = () => {
-      const slice = file.slice(offset, offset + chunkSize);
-      reader.readAsArrayBuffer(slice);
-    };
-
-    reader.onload = (e) => {
-      if (e.target?.readyState !== FileReader.DONE) return;
-      
-      const chunk = e.target.result as ArrayBuffer;
-      connection.send({
-        type: 'file-chunk',
-        id: fileId,
-        chunk
+      newPeer.on('open', (openedId) => {
+        setPeerId(openedId);
+        setPeer(newPeer);
       });
 
-      offset += chunk.byteLength;
-      
-      const now = Date.now();
-      const elapsed = (now - startTime) / 1000; // seconds
-      const speed = elapsed > 0 ? offset / elapsed : 0;
-      const remainingBytes = file.size - offset;
-      const eta = speed > 0 ? remainingBytes / speed : 0;
-      
-      const progress = (offset / file.size) * 100;
+      newPeer.on('connection', (conn) => {
+        setupConnection(conn);
+      });
+
+      newPeer.on('error', (err) => {
+        setError(err.message);
+        setState('error');
+      });
+
+      return newPeer;
+    },
+    [peer, setupConnection],
+  );
+
+  const connectToPeer = useCallback(
+    (targetId: string) => {
+      let activePeer = peer;
+
+      setState('connecting');
+      setError(null);
+      setConnectionStage('Buscando dispositivo...');
+
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+      }
+
+      const performConnect = (p: Peer) => {
+        const transitionTimer = setTimeout(() => {
+          setConnectionStage('Estabelecendo canal seguro...');
+        }, STAGE_TRANSITION_DELAY_MS);
+
+        const conn = p.connect(targetId, { reliable: true });
+        pendingConnRef.current = conn;
+        setupConnection(conn);
+
+        connectionTimeoutRef.current = setTimeout(() => {
+          clearTimeout(transitionTimer);
+          if (pendingConnRef.current === conn) {
+            conn.close();
+            pendingConnRef.current = null;
+            setError('Não foi possível encontrar o dispositivo. Verifique se o código está correto.');
+            setState('error');
+          }
+        }, CONNECTION_TIMEOUT_MS);
+      };
+
+      if (!activePeer) {
+        activePeer = initializePeer();
+      }
+
+      if (activePeer.open) {
+        performConnect(activePeer);
+      } else {
+        activePeer.once('open', () => {
+          performConnect(activePeer!);
+        });
+        activePeer.once('error', (err) => {
+          if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = null;
+          }
+          setError(err.message);
+          setState('error');
+        });
+      }
+    },
+    [peer, initializePeer, setupConnection],
+  );
+
+  const sendFile = useCallback(
+    async (file: File) => {
+      if (!connection || state !== 'connected') return;
+
+      const fileId = Math.random().toString(36).substring(7);
+      const startTime = Date.now();
       setTransfers(prev => ({
         ...prev,
         [fileId]: {
-          ...prev[fileId],
-          progress,
-          speed,
-          eta
-        }
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          progress: 0,
+          status: 'transferring',
+          direction: 'sending',
+          startTime,
+          speed: 0,
+          eta: 0,
+        },
       }));
 
-      if (offset < file.size) {
-        setTimeout(readNextChunk, 1);
-      } else {
-        connection.send({ type: 'file-end', id: fileId });
+      connection.send({
+        type: 'file-start',
+        id: fileId,
+        name: file.name,
+        size: file.size,
+      });
+
+      let offset = 0;
+      const reader = new FileReader();
+
+      const readNextChunk = () => {
+        const slice = file.slice(offset, offset + CHUNK_SIZE);
+        reader.readAsArrayBuffer(slice);
+      };
+
+      reader.onload = (e) => {
+        if (e.target?.readyState !== FileReader.DONE) return;
+
+        const chunk = e.target.result as ArrayBuffer;
+        connection.send({ type: 'file-chunk', id: fileId, chunk });
+
+        offset += chunk.byteLength;
+
+        const now = Date.now();
+        const elapsed = (now - startTime) / 1000;
+        const speed = elapsed > 0 ? offset / elapsed : 0;
+        const remainingBytes = file.size - offset;
+        const eta = speed > 0 ? remainingBytes / speed : 0;
+        const progress = (offset / file.size) * 100;
+
         setTransfers(prev => ({
           ...prev,
           [fileId]: {
             ...prev[fileId],
-            progress: 100,
-            status: 'completed',
-            speed: 0,
-            eta: 0
-          }
+            progress,
+            speed,
+            eta,
+          },
         }));
-      }
-    };
 
-    readNextChunk();
-  }, [connection, state]);
+        if (offset < file.size) {
+          setTimeout(readNextChunk, 1);
+        } else {
+          connection.send({ type: 'file-end', id: fileId });
+          setTransfers(prev => ({
+            ...prev,
+            [fileId]: {
+              ...prev[fileId],
+              progress: 100,
+              status: 'completed',
+              speed: 0,
+              eta: 0,
+            },
+          }));
+        }
+      };
 
-  const sendText = useCallback((content: string) => {
-    if (!connection || state !== 'connected') return;
+      readNextChunk();
+    },
+    [connection, state],
+  );
 
-    const id = Math.random().toString(36).substring(7);
-    const msg = {
-      type: 'text' as const,
-      id,
-      content,
-      timestamp: Date.now()
-    };
-    connection.send(msg);
+  const sendText = useCallback(
+    (content: string) => {
+      if (!connection || state !== 'connected') return;
 
-    setMessages(prev => [...prev, {
-      id,
-      content,
-      direction: 'sending',
-      timestamp: msg.timestamp
-    }]);
-  }, [connection, state]);
+      const id = Math.random().toString(36).substring(7);
+      const msg = {
+        type: 'text' as const,
+        id,
+        content,
+        timestamp: Date.now(),
+      };
+      connection.send(msg);
 
-  // Clean disconnect
+      setMessages(prev => [
+        ...prev,
+        { id, content, direction: 'sending', timestamp: msg.timestamp },
+      ]);
+    },
+    [connection, state],
+  );
+
   const disconnect = useCallback(() => {
     if (connectionTimeoutRef.current) {
       clearTimeout(connectionTimeoutRef.current);
@@ -419,6 +404,6 @@ export function usePeer(options?: UsePeerOptions) {
     connectToPeer,
     sendFile,
     sendText,
-    disconnect
+    disconnect,
   };
 }
