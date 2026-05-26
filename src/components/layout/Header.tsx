@@ -1,4 +1,3 @@
-import { Share2 } from 'lucide-react';
 import type { PeerState } from '../../types';
 import { cn } from '../../lib/utils';
 
@@ -12,21 +11,20 @@ export function Header({ peerState, onDisconnect, onLogoClick }: HeaderProps) {
   return (
     <header className="flex items-center justify-between mb-4 pb-3 sm:mb-6 sm:pb-4 border-b border-white/5">
       <div
-        className="flex items-center gap-2.5 cursor-pointer"
+        className="flex items-center cursor-pointer"
         onClick={onLogoClick}
         role="button"
       >
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
-          <Share2 className="text-sky-300 w-4.5 h-4.5" />
-        </div>
-        <div>
-          <h1 className="text-sm sm:text-base font-bold text-white tracking-tight">LiquidPeer</h1>
-          <p className="text-[10px] text-white/30 font-medium">Compartilhamento Líquido</p>
+        {/* Tiny glassy soap bubble containing the app logo image */}
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full liquid-soap-bubble flex items-center justify-center animate-wobble-slow-1 shadow-[0_4px_15px_rgba(0,0,0,0.3)]">
+          <img src="/favicon.svg" alt="LiquidPeer Logo" className="w-5.5 h-5.5 object-contain opacity-85 select-none pointer-events-none" />
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/5 bg-white/[0.02]">
+        {/* Volumetric glass status pill */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 bg-white/[0.03] shadow-[0_4px_12px_rgba(0,0,0,0.25),inset_0_1px_1.5px_rgba(255,255,255,0.25)] backdrop-blur-md relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
           <span
             className={cn(
               "w-1.5 h-1.5 rounded-full transition-all duration-300",
@@ -36,10 +34,10 @@ export function Header({ peerState, onDisconnect, onLogoClick }: HeaderProps) {
                   ? "bg-amber-400 shadow-[0_0_6px_#fbbf24] animate-pulse"
                   : peerState === 'error'
                     ? "bg-rose-500 shadow-[0_0_6px_#f43f5e]"
-                    : "bg-white/20",
+                    : "bg-white/25",
             )}
           />
-          <span className="text-[10px] font-semibold text-white/60 tracking-wide uppercase">
+          <span className="text-[9px] font-bold text-white/70 tracking-wider uppercase select-none">
             {peerState === 'connected'
               ? 'Conectado'
               : peerState === 'connecting'
@@ -53,7 +51,7 @@ export function Header({ peerState, onDisconnect, onLogoClick }: HeaderProps) {
         {peerState === 'connected' && (
           <button
             onClick={onDisconnect}
-            className="text-[9px] font-semibold text-white/45 hover:text-rose-300 bg-white/5 hover:bg-rose-500/10 px-2 py-1 rounded-md border border-white/5 transition-all cursor-pointer"
+            className="text-[9px] font-bold text-white/55 hover:text-rose-300 bg-white/5 hover:bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-white/10 hover:border-rose-500/20 transition-all cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
           >
             Sair
           </button>
