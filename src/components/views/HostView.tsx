@@ -13,13 +13,22 @@ interface HostViewProps {
 export function HostView({ peerId, onCancel, showToast }: HostViewProps) {
   const [copied, setCopied] = useState(false);
 
-  const copyCode = () => {
+  // Full invite URL so external camera apps open the room directly
+  const shareUrl = peerId
+    ? `${window.location.origin}${window.location.pathname}?room=${peerId}`
+    : '';
+
+  const copyCode = async () => {
     if (!peerId) return;
-    navigator.clipboard.writeText(peerId);
-    setCopied(true);
-    showToast('Código copiado!', 'success');
-    playBubbleSound();
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(peerId);
+      setCopied(true);
+      showToast('Código copiado!', 'success');
+      playBubbleSound();
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast('Não foi possível copiar. Copie o código manualmente.', 'error');
+    }
   };
 
   return (
@@ -35,7 +44,7 @@ export function HostView({ peerId, onCancel, showToast }: HostViewProps) {
             {/* Specular sheen over the white QR code square */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none z-10" />
             <QRCodeSVG
-              value={peerId}
+              value={shareUrl}
               size={200}
               level="H"
               includeMargin={false}

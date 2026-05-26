@@ -15,12 +15,16 @@ export function ShareRoomModal({ peerId, onClose, showToast }: ShareRoomModalPro
 
   const shareUrl = `${window.location.origin}${window.location.pathname}?room=${peerId}`;
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    showToast('Link de convite copiado!', 'success');
-    playBubbleSound();
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      showToast('Link de convite copiado!', 'success');
+      playBubbleSound();
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast('Não foi possível copiar. Copie o link manualmente.', 'error');
+    }
   };
 
   return (

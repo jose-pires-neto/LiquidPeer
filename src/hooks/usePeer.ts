@@ -496,10 +496,14 @@ export function usePeer(options?: UsePeerOptions) {
 
   const sendFile = useCallback(
     async (file: File, targetPeerId?: string) => {
-      // Find all target connections or specific targeted connection
+      // Use ref snapshots to always read the latest connections,
+      // avoiding stale closure issues when new peers join between renders.
+      const currentConns = connectionsRef.current;
+      const currentRegistry = peersRegistryRef.current;
+
       const targets = targetPeerId && targetPeerId !== 'all'
-        ? (connections[targetPeerId] ? [connections[targetPeerId]] : [])
-        : Object.values(connections);
+        ? (currentConns[targetPeerId] ? [currentConns[targetPeerId]] : [])
+        : Object.values(currentConns);
 
       if (targets.length === 0) return;
 
@@ -520,7 +524,7 @@ export function usePeer(options?: UsePeerOptions) {
             speed: 0,
             eta: 0,
             peerId: conn.peer,
-            peerName: peersRegistry[conn.peer]?.osName || 'Par',
+            peerName: currentRegistry[conn.peer]?.osName || 'Par',
           },
         }));
 
@@ -584,7 +588,7 @@ export function usePeer(options?: UsePeerOptions) {
         readNextChunk();
       });
     },
-    [connections, peersRegistry],
+    [],
   );
 
   const sendText = useCallback(
