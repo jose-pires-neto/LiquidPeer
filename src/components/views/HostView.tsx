@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, ArrowLeft } from 'lucide-react';
+import { Copy, Check, ArrowLeft, Share2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { playBubbleSound } from '../../lib/audio';
 import { RoomCodeDisplay } from '../layout/RoomCodeDisplay';
@@ -13,6 +13,7 @@ interface HostViewProps {
 
 export function HostView({ peerId, onCancel, showToast }: HostViewProps) {
   const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Full invite URL so external camera apps open the room directly
   const shareUrl = peerId
@@ -29,6 +30,39 @@ export function HostView({ peerId, onCancel, showToast }: HostViewProps) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       showToast('Não foi possível copiar. Copie o código manualmente.', 'error');
+    }
+  };
+
+  const handleInvite = async () => {
+    if (!peerId) return;
+    playBubbleSound();
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'LiquidPeer',
+          text: 'Entre na minha sala no LiquidPeer para compartilharmos arquivos em tempo real!',
+          url: shareUrl,
+        });
+        showToast('Link compartilhado com sucesso!', 'success');
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          await fallbackCopyLink();
+        }
+      }
+    } else {
+      await fallbackCopyLink();
+    }
+  };
+
+  const fallbackCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(true);
+      showToast('Link de convite copiado!', 'success');
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      showToast('Não foi possível copiar o link. Copie manualmente.', 'error');
     }
   };
 
@@ -56,23 +90,45 @@ export function HostView({ peerId, onCancel, showToast }: HostViewProps) {
           <div className="w-full space-y-3">
             <RoomCodeDisplay code={peerId} />
 
-            <button
-              onClick={copyCode}
-              className={cn(
-                "liquid-glass-button px-5 py-2.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mx-auto transition-all duration-300 shadow-md rounded-full",
-                copied ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]" : "",
-              )}
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3 h-3 text-emerald-300 animate-in zoom-in-50" /> Copiado
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3 text-white/60" /> Copiar Código
-                </>
-              )}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2.5 justify-center items-center w-full max-w-[280px] sm:max-w-none mx-auto pt-1">
+              {/* Convidar Amigo Button (Primary) */}
+              <button
+                onClick={handleInvite}
+                className={cn(
+                  "liquid-glass-button px-5 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 shadow-md rounded-full w-full sm:w-auto",
+                  copiedLink ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]" : "",
+                )}
+              >
+                {copiedLink ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-300 animate-in zoom-in-50" /> Link Copiado
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3 h-3 text-white/60 animate-pulse" /> Convidar Amigo
+                  </>
+                )}
+              </button>
+
+              {/* Copiar Código Button (Secondary) */}
+              <button
+                onClick={copyCode}
+                className={cn(
+                  "px-5 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 shadow-sm rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 text-white/70 hover:text-white w-full sm:w-auto cursor-pointer",
+                  copied ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]" : "",
+                )}
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-300 animate-in zoom-in-50" /> Copiado
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3 text-white/50" /> Copiar Código
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       ) : (
