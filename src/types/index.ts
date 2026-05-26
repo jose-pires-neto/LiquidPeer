@@ -19,6 +19,8 @@ export interface FileTransfer {
   speed?: number;
   eta?: number;
   startTime?: number;
+  peerId?: string;     // The peer target/source connection ID
+  peerName?: string;   // Friendly device description
 }
 
 // Chat/notes message
@@ -27,6 +29,8 @@ export interface PeerMessage {
   content: string;
   direction: 'sending' | 'receiving';
   timestamp: number;
+  peerId?: string;     // The sending peer connection ID
+  peerName?: string;   // Friendly device description
 }
 
 // Wire protocol messages
@@ -34,7 +38,16 @@ export type TransferMessage =
   | { type: 'file-start'; id: string; name: string; size: number }
   | { type: 'file-chunk'; id: string; chunk: ArrayBuffer }
   | { type: 'file-end'; id: string }
-  | { type: 'text'; id: string; content: string; timestamp: number };
+  | { type: 'text'; id: string; content: string; timestamp: number }
+  | { 
+      type: 'peer-list'; 
+      peers: { 
+        id: string; 
+        deviceType: 'mobile' | 'desktop'; 
+        osName: string; 
+        initials: string; 
+      }[];
+    };
 
 // Toast notification
 export interface Toast {

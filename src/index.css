@@ -235,6 +235,35 @@
   .animate-bubble-left-2 { animation: bubble-flow-left 2.4s linear infinite 0.8s; }
   .animate-bubble-left-3 { animation: bubble-flow-left 2.4s linear infinite 1.6s; }
 
+  /* Vertical upward bubble flow for multi-peer transfers */
+  @keyframes bubble-flow-up {
+    0% {
+      bottom: 15%;
+      opacity: 0;
+      transform: scale(0.4) translateX(-50%) translateY(0);
+    }
+    15% {
+      opacity: 0.85;
+      transform: scale(1) translateX(-30%) translateY(-10px);
+    }
+    50% {
+      transform: scale(0.9) translateX(-70%) translateY(-30px);
+    }
+    85% {
+      opacity: 0.85;
+      transform: scale(1) translateX(-30%) translateY(-50px);
+    }
+    100% {
+      bottom: 85%;
+      opacity: 0;
+      transform: scale(0.4) translateX(-50%) translateY(-70px);
+    }
+  }
+
+  .animate-bubble-up-1 { animation: bubble-flow-up 2.2s linear infinite; }
+  .animate-bubble-up-2 { animation: bubble-flow-up 2.2s linear infinite 0.7s; }
+  .animate-bubble-up-3 { animation: bubble-flow-up 2.2s linear infinite 1.4s; }
+
   /* Custom scrollbar */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -401,6 +430,54 @@
       0 10px 20px -3px rgba(0, 0, 0, 0.35),
       inset 0 -5px 12px -3px rgba(56, 189, 248, 0.4),
       inset 0 5px 12px -3px rgba(255, 255, 255, 0.4);
+  }
+
+  /* Liquid Wave Animation for Bubbles */
+  @keyframes wave-spin {
+    from {
+      transform: translate(-50%, 0) rotate(0deg);
+    }
+    to {
+      transform: translate(-50%, 0) rotate(360deg);
+    }
+  }
+
+  .animate-wave-spin {
+    animation: wave-spin 9s linear infinite;
+  }
+
+  /* Iridescent Soap Bubble Particles */
+  .iridescent-bubble {
+    position: absolute;
+    border-radius: 50%;
+    /* Radial gradient simulating iridescence with subtle rainbow ring edges */
+    background: radial-gradient(circle at 30% 30%, 
+      rgba(255, 255, 255, 0.4) 0%, 
+      rgba(56, 189, 248, 0.08) 35%, 
+      rgba(236, 72, 153, 0.12) 65%, 
+      rgba(34, 211, 238, 0.22) 85%, 
+      rgba(255, 255, 255, 0) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+      inset -2px -2px 6px rgba(34, 211, 238, 0.3),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.5),
+      0 4px 10px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    transform-origin: center;
+  }
+
+  /* Specular sheen peak on particles */
+  .iridescent-bubble::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 15%;
+    width: 30%;
+    height: 30%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    pointer-events: none;
   }
 }
 
