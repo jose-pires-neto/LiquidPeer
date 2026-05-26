@@ -70,6 +70,7 @@
     /* Deep space navy fluid gradient background (Minimalist, Apple-style) */
     background: radial-gradient(ellipse at bottom, #09122c 0%, #050814 60%, #020308 100%);
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-y: auto;
   }
 
@@ -248,6 +249,35 @@
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.16);
+  }
+
+  /* Responsive safe-area container — uses max() to respect notch/Dynamic Island */
+  .safe-area-container {
+    padding:
+      max(0.625rem, env(safe-area-inset-top, 0px))
+      max(0.625rem, env(safe-area-inset-right, 0px))
+      max(0.625rem, env(safe-area-inset-bottom, 0px))
+      max(0.625rem, env(safe-area-inset-left, 0px));
+  }
+
+  @media (min-width: 640px) {
+    .safe-area-container {
+      padding:
+        max(1rem, env(safe-area-inset-top, 0px))
+        max(1rem, env(safe-area-inset-right, 0px))
+        max(1rem, env(safe-area-inset-bottom, 0px))
+        max(1rem, env(safe-area-inset-left, 0px));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .safe-area-container {
+      padding:
+        max(1.5rem, env(safe-area-inset-top, 0px))
+        max(1.5rem, env(safe-area-inset-right, 0px))
+        max(1.5rem, env(safe-area-inset-bottom, 0px))
+        max(1.5rem, env(safe-area-inset-left, 0px));
+    }
   }
 }
 

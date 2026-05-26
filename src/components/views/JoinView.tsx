@@ -33,10 +33,10 @@ export function JoinView({ peerState, onSubmit, onBack }: JoinViewProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-between h-full space-y-6 animate-in fade-in duration-300">
+    <div className="flex flex-col items-center justify-between h-full space-y-5 sm:space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-0.5">
-        <h2 className="text-sm font-bold text-white">Entrar com Código</h2>
-        <p className="text-white/40 text-[10px]">Insira o código de 6 letras da outra sala.</p>
+        <h2 className="text-sm sm:text-base font-bold text-white">Entrar com Código</h2>
+        <p className="text-white/40 text-[11px]">Insira o código de 6 letras da outra sala.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6 pt-2">
@@ -58,7 +58,7 @@ export function JoinView({ peerState, onSubmit, onBack }: JoinViewProps) {
 
           <div
             onClick={handleGridClick}
-            className="flex gap-2 justify-center cursor-pointer"
+            className="flex gap-1.5 sm:gap-2.5 justify-center cursor-pointer"
           >
             {Array.from({ length: ROOM_CODE_LENGTH }).map((_, idx) => {
               const char = joinId[idx] || '';
@@ -67,7 +67,7 @@ export function JoinView({ peerState, onSubmit, onBack }: JoinViewProps) {
                 <div
                   key={idx}
                   className={cn(
-                    "w-9 h-12 rounded-xl flex items-center justify-center font-mono text-xl font-extrabold transition-all duration-200 border",
+                    "w-8 h-11 sm:w-10 sm:h-13 rounded-xl flex items-center justify-center font-mono text-lg sm:text-xl font-extrabold transition-all duration-200 border",
                     isFocused
                       ? "border-sky-500 bg-sky-500/10 shadow-[0_0_10px_rgba(56,189,248,0.25)] scale-105"
                       : char
@@ -86,7 +86,7 @@ export function JoinView({ peerState, onSubmit, onBack }: JoinViewProps) {
         <button
           type="submit"
           disabled={joinId.length < ROOM_CODE_LENGTH || peerState === 'connecting'}
-          className="w-full liquid-glass-button py-3 text-xs flex justify-center items-center gap-1.5 disabled:opacity-40 cursor-pointer"
+          className="w-full liquid-glass-button py-3.5 text-xs flex justify-center items-center gap-1.5 disabled:opacity-40 cursor-pointer"
         >
           {peerState === 'connecting' ? (
             <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
