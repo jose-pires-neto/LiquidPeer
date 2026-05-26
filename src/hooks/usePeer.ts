@@ -11,6 +11,7 @@ import {
   CHUNK_SIZE,
   CONNECTION_TIMEOUT_MS,
   STAGE_TRANSITION_DELAY_MS,
+  MAX_CONNECTIONS,
 } from '../constants';
 
 export type { FileTransfer, PeerMessage };
@@ -229,9 +230,7 @@ export function usePeer(options?: UsePeerOptions) {
   }, []);
 
   const handleIncomingDataRef = useRef(handleIncomingData);
-  useEffect(() => {
-    handleIncomingDataRef.current = handleIncomingData;
-  }, [handleIncomingData]);
+  handleIncomingDataRef.current = handleIncomingData;
 
   const setupConnection = useCallback(
     (conn: DataConnection) => {
@@ -413,9 +412,9 @@ export function usePeer(options?: UsePeerOptions) {
       });
 
       newPeer.on('connection', (conn) => {
-        // Enforce max 6 participants check (5 active connections)
+        // Enforce max participants check
         setConnections(currentConns => {
-          if (Object.keys(currentConns).length >= 5) {
+          if (Object.keys(currentConns).length >= MAX_CONNECTIONS) {
             conn.on('open', () => {
               conn.send({
                 type: 'text',
@@ -455,7 +454,7 @@ export function usePeer(options?: UsePeerOptions) {
       }
 
       const performConnect = (p: Peer) => {
-        if (Object.keys(connectionsRef.current).length >= 5) {
+        if (Object.keys(connectionsRef.current).length >= MAX_CONNECTIONS) {
           setError('A sala está cheia! (Máximo de 6 participantes)');
           setState('error');
           return;

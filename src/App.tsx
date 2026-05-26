@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { ViewState } from './types';
 import { cn } from './lib/utils';
@@ -25,6 +25,19 @@ function App() {
 
   const { toasts, showToast } = useToast();
 
+  const handleConnect = useCallback(() => {
+    setView('transfer');
+    setShowScanner(false);
+    showToast('Conectado com sucesso!', 'success');
+    playDropletSound();
+  }, [showToast]);
+
+  const handleDisconnect = useCallback(() => {
+    setView('home');
+    showToast('Conexão encerrada.', 'info');
+    playDropletSound();
+  }, [showToast]);
+
   const {
     peerId,
     state: peerState,
@@ -39,17 +52,8 @@ function App() {
     sendText,
     disconnect,
   } = usePeer({
-    onConnect: () => {
-      setView('transfer');
-      setShowScanner(false);
-      showToast('Conectado com sucesso!', 'success');
-      playDropletSound();
-    },
-    onDisconnect: () => {
-      setView('home');
-      showToast('Conexão encerrada.', 'info');
-      playDropletSound();
-    },
+    onConnect: handleConnect,
+    onDisconnect: handleDisconnect,
   });
 
   const roomCode = peerId && peerId.length === ROOM_CODE_LENGTH
