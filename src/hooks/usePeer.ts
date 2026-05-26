@@ -475,11 +475,20 @@ export function usePeer(options?: UsePeerOptions) {
         activePeer = initializePeer();
       }
 
+      // Guard against double-connect: performConnect is called at most once,
+      // regardless of whether the peer was already open or fires 'open' later.
+      let hasConnected = false;
+      const safePerformConnect = (p: Peer) => {
+        if (hasConnected) return;
+        hasConnected = true;
+        performConnect(p);
+      };
+
       if (activePeer.open) {
-        performConnect(activePeer);
+        safePerformConnect(activePeer);
       } else {
         activePeer.once('open', () => {
-          performConnect(activePeer!);
+          safePerformConnect(activePeer!);
         });
         activePeer.once('error', (err) => {
           if (connectionTimeoutRef.current) {
@@ -508,7 +517,8 @@ export function usePeer(options?: UsePeerOptions) {
       if (targets.length === 0) return;
 
       targets.forEach(async (conn) => {
-        const fileId = Math.random().toString(36).substring(7);
+        // Timestamp prefix ensures uniqueness across concurrent transfers
+        const fileId = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2)}`;
         const startTime = Date.now();
         
         setTransfers(prev => ({

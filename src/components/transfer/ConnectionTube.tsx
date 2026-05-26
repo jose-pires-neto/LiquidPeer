@@ -380,6 +380,13 @@ export function ConnectionTube({
         prevTransfersRef.current[transfer.id] = transfer.status;
       });
 
+      // Prune stale entries from prevTransfersRef to prevent unbounded growth
+      // across long sessions with many transfers.
+      const activeIds = new Set(activeTransfers.map(t => t.id));
+      for (const id of Object.keys(prevTransfersRef.current)) {
+        if (!activeIds.has(id)) delete prevTransfersRef.current[id];
+      }
+
       // 5. Update active splash burst states (fades out and descends slightly)
       let bursts = [...burstsRef.current, ...newBursts];
       bursts = bursts
@@ -598,7 +605,8 @@ export function ConnectionTube({
                 setHoveredPeerId(node.id);
               }}
               onDragLeave={() => {
-                setHoveredPeerId(null);
+                // Only clear hover if the leave event belongs to the currently hovered node
+                if (hoveredPeerId === node.id) setHoveredPeerId(null);
               }}
               onDrop={(e) => {
                 if (node.isLocal || node.id === 'invite') return;
