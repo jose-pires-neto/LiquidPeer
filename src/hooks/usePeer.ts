@@ -107,6 +107,12 @@ export function usePeer(options?: UsePeerOptions) {
   const receiveBuffers = useRef<Record<string, Blob[]>>({});
   const receivingFiles = useRef<Record<string, ReceivingFileInfo>>({});
 
+  // Throttle refs: timestamps of last progress setState per transfer ID
+  // Prevents flooding React with hundreds of setTransfers/s during chunk sending/receiving.
+  const sendProgressThrottleRef = useRef<Record<string, number>>({});
+  const recvProgressThrottleRef = useRef<Record<string, number>>({});
+  const PROGRESS_THROTTLE_MS = 100; // max 10 UI updates/s per transfer
+
   const onConnectRef = useRef(options?.onConnect);
   const onDisconnectRef = useRef(options?.onDisconnect);
 
@@ -173,15 +179,20 @@ export function usePeer(options?: UsePeerOptions) {
       const eta = speed > 0 ? remainingBytes / speed : 0;
       const progress = (fileInfo.received / fileInfo.size) * 100;
 
-      setTransfers(prev => ({
-        ...prev,
-        [data.id]: {
-          ...prev[data.id],
-          progress,
-          speed,
-          eta,
-        },
-      }));
+      // Throttle: only update React state every PROGRESS_THROTTLE_MS on receiving side
+      const lastRecvUpdate = recvProgressThrottleRef.current[data.id] || 0;
+      if (now - lastRecvUpdate >= PROGRESS_THROTTLE_MS) {
+        recvProgressThrottleRef.current[data.id] = now;
+        setTransfers(prev => ({
+          ...prev,
+          [data.id]: {
+            ...prev[data.id],
+            progress,
+            speed,
+            eta,
+          },
+        }));
+      }
     } else if (data.type === 'file-end') {
       const fileInfo = receivingFiles.current[data.id];
       if (!fileInfo) return;
@@ -201,6 +212,7 @@ export function usePeer(options?: UsePeerOptions) {
 
       delete receivingFiles.current[data.id];
       delete receiveBuffers.current[data.id];
+      delete recvProgressThrottleRef.current[data.id];
     } else if (data.type === 'text') {
       setMessages(prev => [
         ...prev,
@@ -568,19 +580,19 @@ export function usePeer(options?: UsePeerOptions) {
           const eta = speed > 0 ? remainingBytes / speed : 0;
           const progress = (offset / file.size) * 100;
 
-          setTransfers(prev => ({
-            ...prev,
-            [fileId]: {
-              ...prev[fileId],
-              progress,
-              speed,
-              eta,
-            },
-          }));
-
           if (offset < file.size) {
+            // Throttle: only update React state every PROGRESS_THROTTLE_MS on sending side
+            const lastSendUpdate = sendProgressThrottleRef.current[fileId] || 0;
+            if (now - lastSendUpdate >= PROGRESS_THROTTLE_MS) {
+              sendProgressThrottleRef.current[fileId] = now;
+              setTransfers(prev => ({
+                ...prev,
+                [fileId]: { ...prev[fileId], progress, speed, eta },
+              }));
+            }
             setTimeout(readNextChunk, 1);
           } else {
+            delete sendProgressThrottleRef.current[fileId];
             conn.send({ type: 'file-end', id: fileId });
             setTransfers(prev => ({
               ...prev,

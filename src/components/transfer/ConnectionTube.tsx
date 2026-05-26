@@ -279,7 +279,9 @@ export function ConnectionTube({
       }
 
       nodesRef.current = nodes;
-      setNodesState([...nodes]);
+      // Physics runs every frame (60fps) but visual setState fires every other frame (~30fps).
+      // This halves the React re-render rate without affecting simulation accuracy.
+      const shouldRender = ticks % 2 === 0;
 
       // 3. Spawning and Moving Iridescent Particles (File Transfer Streams)
       let particles = [...particlesRef.current];
@@ -350,7 +352,7 @@ export function ConnectionTube({
       });
 
       particlesRef.current = remainingParticles;
-      setParticlesState(remainingParticles);
+      if (shouldRender) setParticlesState(remainingParticles);
 
       // 4. Trigger Major Burst Splash on File Transfer Completion
       activeTransfers.forEach(transfer => {
@@ -401,7 +403,12 @@ export function ConnectionTube({
         .filter(b => b.alpha > 0);
 
       burstsRef.current = bursts;
-      setBurstsState(bursts);
+      // Always render when there are new completion bursts; otherwise follow the throttle
+      if (shouldRender || newBursts.length > 0) {
+        setNodesState([...nodes]);
+        setParticlesState(particlesRef.current);
+        setBurstsState(bursts);
+      }
 
       animFrameId = requestAnimationFrame(updatePhysics);
     };
