@@ -13,12 +13,14 @@ import { HomeView } from './components/views/HomeView';
 import { HostView } from './components/views/HostView';
 import { JoinView } from './components/views/JoinView';
 import { TransferView } from './components/views/TransferView';
+import { ShareRoomModal } from './components/views/ShareRoomModal';
 import { ROOM_CODE_LENGTH } from './constants';
 import { getSharedFiles, clearSharedFiles } from './lib/db';
 
 function App() {
   const [view, setView] = useState<ViewState>('home');
   const [showScanner, setShowScanner] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [sharedFiles, setSharedFiles] = useState<File[]>([]);
 
   const { toasts, showToast } = useToast();
@@ -30,6 +32,7 @@ function App() {
     connectionStage,
     transfers,
     messages,
+    peers,
     initializePeer,
     connectToPeer,
     sendFile,
@@ -48,6 +51,10 @@ function App() {
       playDropletSound();
     },
   });
+
+  const roomCode = peerId && peerId.length === ROOM_CODE_LENGTH
+    ? peerId
+    : peers?.find(p => p.id.length === ROOM_CODE_LENGTH)?.id || null;
 
   // Watch connection errors
   useEffect(() => {
@@ -80,6 +87,17 @@ function App() {
       window.history.replaceState({}, '', '/');
     }
   }, [showToast]);
+
+  // Check for room invitation in URL query params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomCodeParam = params.get('room');
+    if (roomCodeParam && roomCodeParam.length === ROOM_CODE_LENGTH) {
+      connectToPeer(roomCodeParam.toUpperCase());
+      window.history.replaceState({}, '', window.location.pathname);
+      showToast(`Conectando à sala ${roomCodeParam.toUpperCase()}...`, 'info');
+    }
+  }, [connectToPeer, showToast]);
 
   // Automatically transfer shared files when peer connection is established
   useEffect(() => {
@@ -179,6 +197,7 @@ function App() {
           peerState={peerState}
           onDisconnect={disconnect}
           onLogoClick={handleGoHome}
+          onInviteClick={() => setShowInviteModal(true)}
         />
 
         {/* Error Banner */}
@@ -229,13 +248,23 @@ function App() {
             <TransferView
               transfers={transfers}
               messages={messages}
+              peers={peers}
               onSendFile={sendFile}
               onSendText={sendText}
               showToast={showToast}
+              onInviteClick={() => setShowInviteModal(true)}
             />
           )}
         </div>
       </main>
+
+      {showInviteModal && roomCode && (
+        <ShareRoomModal
+          peerId={roomCode}
+          onClose={() => setShowInviteModal(false)}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }

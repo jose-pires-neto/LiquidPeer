@@ -10,17 +10,21 @@ import { ChatPanel } from '../chat/ChatPanel';
 interface TransferViewProps {
   transfers: FileTransfer[];
   messages: PeerMessage[];
-  onSendFile: (file: File) => void;
+  peers: { id: string; deviceType: 'mobile' | 'desktop'; osName: string; initials: string }[];
+  onSendFile: (file: File, targetPeerId?: string) => void;
   onSendText: (text: string) => void;
   showToast: (message: string, type: 'info' | 'success' | 'error') => void;
+  onInviteClick?: () => void;
 }
 
 export function TransferView({
   transfers,
   messages,
+  peers,
   onSendFile,
   onSendText,
   showToast,
+  onInviteClick,
 }: TransferViewProps) {
   const [activeTab, setActiveTab] = useState<TabState>('transfer');
   const [clearedIds, setClearedIds] = useState<Set<string>>(new Set());
@@ -131,6 +135,9 @@ export function TransferView({
             activeTransfer={activeTransfer} 
             isSending={isSending ?? false} 
             transfers={transfers}
+            peers={peers}
+            onSendFile={onSendFile}
+            onInviteClick={onInviteClick}
           />
           <DropZone onFilesSelected={handleFilesSelected} />
 
