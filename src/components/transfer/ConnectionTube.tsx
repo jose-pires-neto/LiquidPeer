@@ -1,56 +1,171 @@
-import { Smartphone, Laptop } from 'lucide-react';
+import { useState } from 'react';
+import { Smartphone, Laptop, ArrowRightLeft } from 'lucide-react';
 import type { FileTransfer } from '../../types';
 import { cn } from '../../lib/utils';
 
 interface ConnectionTubeProps {
   activeTransfer?: FileTransfer;
   isSending: boolean;
+  transfers?: FileTransfer[];
 }
 
-export function ConnectionTube({ activeTransfer, isSending }: ConnectionTubeProps) {
+export function ConnectionTube({ activeTransfer, isSending, transfers = [] }: ConnectionTubeProps) {
+  const [isLocalMobile] = useState(() => 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  );
+
+  // Count active transfers in each direction
+  const activeSendingCount = transfers.filter(
+    t => t.direction === 'sending' && (t.status === 'transferring' || t.status === 'pending')
+  ).length;
+
+  const activeReceivingCount = transfers.filter(
+    t => t.direction === 'receiving' && (t.status === 'transferring' || t.status === 'pending')
+  ).length;
+
+  // Calculate bubble sizes dynamically (base 90px, add 14px per queued file, max 146px)
+  const localBubbleSize = Math.min(92 + activeSendingCount * 14, 146);
+  const remoteBubbleSize = Math.min(92 + activeReceivingCount * 14, 146);
+
+  // Extract progress levels
+  const isTransferring = activeTransfer && activeTransfer.status === 'transferring';
+  const localProgress = isTransferring && isSending ? Math.round(activeTransfer.progress) : 0;
+  const remoteProgress = isTransferring && !isSending ? Math.round(activeTransfer.progress) : 0;
+
   return (
-    <div className="flex items-center justify-between w-full px-3 py-3 sm:px-4 sm:py-3.5 liquid-glass-card border border-white/5">
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
-          <Smartphone className="w-5.5 h-5.5 text-white/70" />
-        </div>
-        <span className="text-[10px] font-bold text-white/50 tracking-wider">Meu Device</span>
-      </div>
+    <div className="min-h-[220px] sm:min-h-[250px] w-full flex flex-col justify-center items-center relative rounded-3xl p-4 sm:p-6 bg-white/[0.01] border border-white/10 overflow-hidden shadow-[0_24px_50px_rgba(0,0,0,0.4),inset_0_1px_1.5px_rgba(255,255,255,0.15)] backdrop-blur-xl">
+      {/* Liquid background accent blobs for depth */}
+      <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-sky-500/5 rounded-full blur-3xl -translate-y-1/2 pointer-events-none" />
+      <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-blue-600/5 rounded-full blur-3xl -translate-y-1/2 pointer-events-none" />
 
-      <div className="flex-1 px-3 relative flex items-center justify-center">
-        <div className="relative h-4.5 w-full rounded-full bg-black/45 border border-white/10 shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.7)] overflow-hidden flex items-center">
+      {/* Bubble Row */}
+      <div className="flex items-center justify-between w-full relative z-10 px-2 sm:px-6 md:px-8">
+        
+        {/* Local Device Bubble (Você) */}
+        <div className="flex flex-col items-center gap-2.5">
           <div
-            className={cn(
-              "absolute top-0 bottom-0 bg-sky-500/15 blur-[1.5px] transition-all duration-500",
-              activeTransfer ? "w-full" : "w-0",
+            className="rounded-full liquid-soap-bubble animate-wobble-slow-2 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 select-none border border-white/20"
+            style={{ width: `${localBubbleSize}px`, height: `${localBubbleSize}px` }}
+          >
+            {/* Liquid Wave Progress Overlay */}
+            {localProgress > 0 && (
+              <div
+                className="absolute bottom-0 left-0 right-0 bg-sky-400/25 transition-all duration-300 pointer-events-none"
+                style={{ height: `${localProgress}%` }}
+              >
+                {/* Rotating wave effect surface */}
+                <div className="absolute top-0 left-1/2 w-[220%] h-[220%] bg-sky-300/15 rounded-[38%] -translate-y-[88%] animate-wave-spin pointer-events-none" />
+              </div>
             )}
-          />
 
-          {activeTransfer && (
-            <div className="absolute inset-0 pointer-events-none">
-              {isSending ? (
-                <>
-                  <div className="absolute top-1/2 w-1.5 h-1.5 rounded-full bg-sky-300/90 shadow-[0_0_6px_#38bdf8] animate-bubble-right-1 -translate-y-1/2" />
-                  <div className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-white/95 shadow-[0_0_8px_#ffffff] animate-bubble-right-2 -translate-y-1/2" />
-                  <div className="absolute top-1/2 w-1 h-1 rounded-full bg-sky-200/80 shadow-[0_0_4px_#7dd3fc] animate-bubble-right-3 -translate-y-1/2" />
-                </>
+            {/* Inner Content */}
+            <div className="relative z-10 flex flex-col items-center gap-1 text-center">
+              {isLocalMobile ? (
+                <Smartphone className="w-6 h-6 text-sky-200 opacity-80" />
               ) : (
-                <>
-                  <div className="absolute top-1/2 w-1.5 h-1.5 rounded-full bg-sky-300/90 shadow-[0_0_6px_#38bdf8] animate-bubble-left-1 -translate-y-1/2" />
-                  <div className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-white/95 shadow-[0_0_8px_#ffffff] animate-bubble-left-2 -translate-y-1/2" />
-                  <div className="absolute top-1/2 w-1 h-1 rounded-full bg-sky-200/80 shadow-[0_0_4px_#7dd3fc] animate-bubble-left-3 -translate-y-1/2" />
-                </>
+                <Laptop className="w-6 h-6 text-sky-200 opacity-80" />
               )}
+              {localProgress > 0 ? (
+                <span className="text-[10px] font-black text-white tracking-wide animate-pulse">
+                  {localProgress}%
+                </span>
+              ) : (
+                <span className="text-[9px] font-bold text-white/50 tracking-wider uppercase">
+                  Você
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {/* Active Queue indicator */}
+          {activeSendingCount > 0 && (
+            <span className="text-[8px] font-extrabold text-sky-300 bg-sky-500/10 border border-sky-400/20 px-2 py-0.5 rounded-full animate-bounce">
+              {activeSendingCount} na fila
+            </span>
+          )}
+        </div>
+
+        {/* Connective Channel (Particle flow space) */}
+        <div className="flex-1 min-w-[60px] sm:min-w-[100px] h-12 relative flex items-center justify-center">
+          {/* Subtle connecting stream line */}
+          <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-sky-500/5 via-sky-500/25 to-sky-500/5 blur-[0.5px]" />
+          
+          {/* Flow Indicator Icon */}
+          <div className={cn(
+            "w-7 h-7 rounded-full bg-white/[0.02] border border-white/10 flex items-center justify-center shadow-inner relative z-10 transition-transform duration-500",
+            isTransferring ? "animate-pulse" : ""
+          )}>
+            <ArrowRightLeft className={cn(
+              "w-3.5 h-3.5 text-sky-300/60 transition-transform duration-500",
+              isTransferring && isSending ? "rotate-180 text-sky-300" : "",
+              isTransferring && !isSending ? "text-cyan-300" : ""
+            )} />
+          </div>
+
+          {/* Flowing Iridescent Particles */}
+          {isTransferring && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className={cn(
+                "iridescent-bubble w-3 h-3 top-1",
+                isSending ? "animate-bubble-right-1" : "animate-bubble-left-1"
+              )} />
+              <div className={cn(
+                "iridescent-bubble w-4 h-4 top-4.5",
+                isSending ? "animate-bubble-right-2" : "animate-bubble-left-2"
+              )} />
+              <div className={cn(
+                "iridescent-bubble w-2 h-2 top-8",
+                isSending ? "animate-bubble-right-3" : "animate-bubble-left-3"
+              )} />
             </div>
           )}
         </div>
-      </div>
 
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
-          <Laptop className="w-5.5 h-5.5 text-white/70" />
+        {/* Remote Device Bubble (Par) */}
+        <div className="flex flex-col items-center gap-2.5">
+          <div
+            className="rounded-full liquid-soap-bubble animate-wobble-slow-3 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 select-none border border-white/20"
+            style={{ width: `${remoteBubbleSize}px`, height: `${remoteBubbleSize}px` }}
+          >
+            {/* Liquid Wave Progress Overlay */}
+            {remoteProgress > 0 && (
+              <div
+                className="absolute bottom-0 left-0 right-0 bg-sky-400/25 transition-all duration-300 pointer-events-none"
+                style={{ height: `${remoteProgress}%` }}
+              >
+                {/* Rotating wave effect surface */}
+                <div className="absolute top-0 left-1/2 w-[220%] h-[220%] bg-sky-300/15 rounded-[38%] -translate-y-[88%] animate-wave-spin pointer-events-none" />
+              </div>
+            )}
+
+            {/* Inner Content */}
+            <div className="relative z-10 flex flex-col items-center gap-1 text-center">
+              {/* Default laptop for peer, showing smartphone if we prefer variety */}
+              {isLocalMobile ? (
+                <Laptop className="w-6 h-6 text-sky-200 opacity-80" />
+              ) : (
+                <Smartphone className="w-6 h-6 text-sky-200 opacity-80" />
+              )}
+              {remoteProgress > 0 ? (
+                <span className="text-[10px] font-black text-white tracking-wide animate-pulse">
+                  {remoteProgress}%
+                </span>
+              ) : (
+                <span className="text-[9px] font-bold text-white/50 tracking-wider uppercase">
+                  Par
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Active Queue indicator */}
+          {activeReceivingCount > 0 && (
+            <span className="text-[8px] font-extrabold text-sky-300 bg-sky-500/10 border border-sky-400/20 px-2 py-0.5 rounded-full animate-bounce">
+              {activeReceivingCount} na fila
+            </span>
+          )}
         </div>
-        <span className="text-[10px] font-bold text-white/50 tracking-wider">Remoto</span>
+
       </div>
     </div>
   );

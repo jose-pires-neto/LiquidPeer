@@ -127,7 +127,11 @@ export function TransferView({
             activeTab === 'transfer' ? "flex" : "hidden lg:flex",
           )}
         >
-          <ConnectionTube activeTransfer={activeTransfer} isSending={isSending ?? false} />
+          <ConnectionTube 
+            activeTransfer={activeTransfer} 
+            isSending={isSending ?? false} 
+            transfers={transfers}
+          />
           <DropZone onFilesSelected={handleFilesSelected} />
 
           <div className="p-3.5 liquid-glass-card border border-white/5 text-center flex flex-col justify-center gap-1.5">
