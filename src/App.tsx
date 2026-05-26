@@ -14,10 +14,12 @@ import { HostView } from './components/views/HostView';
 import { JoinView } from './components/views/JoinView';
 import { TransferView } from './components/views/TransferView';
 import { ROOM_CODE_LENGTH } from './constants';
+import { getSharedFiles, clearSharedFiles } from './lib/db';
 
 function App() {
   const [view, setView] = useState<ViewState>('home');
   const [showScanner, setShowScanner] = useState(false);
+  const [sharedFiles, setSharedFiles] = useState<File[]>([]);
 
   const { toasts, showToast } = useToast();
 
@@ -56,6 +58,42 @@ function App() {
       return () => clearTimeout(timer);
     }
   }, [peerError, showToast]);
+
+  // Retrieve shared files on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('shared') === 'true') {
+      getSharedFiles()
+        .then((storedFiles) => {
+          if (storedFiles && storedFiles.length > 0) {
+            const files = storedFiles.map((f) => new File([f.data], f.name, { type: f.type }));
+            setSharedFiles(files);
+            showToast(`${files.length} arquivo(s) compartilhado(s) carregado(s).`, 'info');
+          }
+          clearSharedFiles();
+        })
+        .catch((err) => {
+          console.error('Error fetching shared files from IndexedDB:', err);
+        });
+
+      // Clear query string params from the browser address bar
+      window.history.replaceState({}, '', '/');
+    }
+  }, [showToast]);
+
+  // Automatically transfer shared files when peer connection is established
+  useEffect(() => {
+    if (view === 'transfer' && sharedFiles.length > 0) {
+      const timer = setTimeout(() => {
+        sharedFiles.forEach((file) => {
+          sendFile(file);
+          showToast(`Enviando arquivo compartilhado: ${file.name}`, 'info');
+        });
+        setSharedFiles([]);
+      }, 800); // Small buffer to ensure WebRTC Data Channel is fully ready
+      return () => clearTimeout(timer);
+    }
+  }, [view, sharedFiles, sendFile, showToast]);
 
   // Watch transfers for audio feedback + toasts
   const prevTransfersStates = useRef<Record<string, string>>({});
