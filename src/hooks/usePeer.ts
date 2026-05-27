@@ -11,6 +11,7 @@ import {
   CHUNK_SIZE,
   CONNECTION_TIMEOUT_MS,
   STAGE_TRANSITION_DELAY_MS,
+  MAX_CONNECTIONS,
 } from '../constants';
 
 export type { FileTransfer, PeerMessage };
@@ -107,6 +108,12 @@ export function usePeer(options?: UsePeerOptions) {
   const receiveBuffers = useRef<Record<string, Blob[]>>({});
   const receivingFiles = useRef<Record<string, ReceivingFileInfo>>({});
 
+  // Throttle refs: timestamps of last progress setState per transfer ID
+  // Prevents flooding React with hundreds of setTransfers/s during chunk sending/receiving.
+  const sendProgressThrottleRef = useRef<Record<string, number>>({});
+  const recvProgressThrottleRef = useRef<Record<string, number>>({});
+  const PROGRESS_THROTTLE_MS = 100; // max 10 UI updates/s per transfer
+
   const onConnectRef = useRef(options?.onConnect);
   const onDisconnectRef = useRef(options?.onDisconnect);
 
@@ -173,15 +180,20 @@ export function usePeer(options?: UsePeerOptions) {
       const eta = speed > 0 ? remainingBytes / speed : 0;
       const progress = (fileInfo.received / fileInfo.size) * 100;
 
-      setTransfers(prev => ({
-        ...prev,
-        [data.id]: {
-          ...prev[data.id],
-          progress,
-          speed,
-          eta,
-        },
-      }));
+      // Throttle: only update React state every PROGRESS_THROTTLE_MS on receiving side
+      const lastRecvUpdate = recvProgressThrottleRef.current[data.id] || 0;
+      if (now - lastRecvUpdate >= PROGRESS_THROTTLE_MS) {
+        recvProgressThrottleRef.current[data.id] = now;
+        setTransfers(prev => ({
+          ...prev,
+          [data.id]: {
+            ...prev[data.id],
+            progress,
+            speed,
+            eta,
+          },
+        }));
+      }
     } else if (data.type === 'file-end') {
       const fileInfo = receivingFiles.current[data.id];
       if (!fileInfo) return;
@@ -201,6 +213,7 @@ export function usePeer(options?: UsePeerOptions) {
 
       delete receivingFiles.current[data.id];
       delete receiveBuffers.current[data.id];
+      delete recvProgressThrottleRef.current[data.id];
     } else if (data.type === 'text') {
       setMessages(prev => [
         ...prev,
@@ -217,9 +230,7 @@ export function usePeer(options?: UsePeerOptions) {
   }, []);
 
   const handleIncomingDataRef = useRef(handleIncomingData);
-  useEffect(() => {
-    handleIncomingDataRef.current = handleIncomingData;
-  }, [handleIncomingData]);
+  handleIncomingDataRef.current = handleIncomingData;
 
   const setupConnection = useCallback(
     (conn: DataConnection) => {
@@ -401,9 +412,9 @@ export function usePeer(options?: UsePeerOptions) {
       });
 
       newPeer.on('connection', (conn) => {
-        // Enforce max 6 participants check (5 active connections)
+        // Enforce max participants check
         setConnections(currentConns => {
-          if (Object.keys(currentConns).length >= 5) {
+          if (Object.keys(currentConns).length >= MAX_CONNECTIONS) {
             conn.on('open', () => {
               conn.send({
                 type: 'text',
@@ -443,7 +454,7 @@ export function usePeer(options?: UsePeerOptions) {
       }
 
       const performConnect = (p: Peer) => {
-        if (Object.keys(connectionsRef.current).length >= 5) {
+        if (Object.keys(connectionsRef.current).length >= MAX_CONNECTIONS) {
           setError('A sala está cheia! (Máximo de 6 participantes)');
           setState('error');
           return;
@@ -475,11 +486,20 @@ export function usePeer(options?: UsePeerOptions) {
         activePeer = initializePeer();
       }
 
+      // Guard against double-connect: performConnect is called at most once,
+      // regardless of whether the peer was already open or fires 'open' later.
+      let hasConnected = false;
+      const safePerformConnect = (p: Peer) => {
+        if (hasConnected) return;
+        hasConnected = true;
+        performConnect(p);
+      };
+
       if (activePeer.open) {
-        performConnect(activePeer);
+        safePerformConnect(activePeer);
       } else {
         activePeer.once('open', () => {
-          performConnect(activePeer!);
+          safePerformConnect(activePeer!);
         });
         activePeer.once('error', (err) => {
           if (connectionTimeoutRef.current) {
@@ -496,15 +516,20 @@ export function usePeer(options?: UsePeerOptions) {
 
   const sendFile = useCallback(
     async (file: File, targetPeerId?: string) => {
-      // Find all target connections or specific targeted connection
+      // Use ref snapshots to always read the latest connections,
+      // avoiding stale closure issues when new peers join between renders.
+      const currentConns = connectionsRef.current;
+      const currentRegistry = peersRegistryRef.current;
+
       const targets = targetPeerId && targetPeerId !== 'all'
-        ? (connections[targetPeerId] ? [connections[targetPeerId]] : [])
-        : Object.values(connections);
+        ? (currentConns[targetPeerId] ? [currentConns[targetPeerId]] : [])
+        : Object.values(currentConns);
 
       if (targets.length === 0) return;
 
       targets.forEach(async (conn) => {
-        const fileId = Math.random().toString(36).substring(7);
+        // Timestamp prefix ensures uniqueness across concurrent transfers
+        const fileId = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2)}`;
         const startTime = Date.now();
         
         setTransfers(prev => ({
@@ -520,7 +545,7 @@ export function usePeer(options?: UsePeerOptions) {
             speed: 0,
             eta: 0,
             peerId: conn.peer,
-            peerName: peersRegistry[conn.peer]?.osName || 'Par',
+            peerName: currentRegistry[conn.peer]?.osName || 'Par',
           },
         }));
 
@@ -554,19 +579,19 @@ export function usePeer(options?: UsePeerOptions) {
           const eta = speed > 0 ? remainingBytes / speed : 0;
           const progress = (offset / file.size) * 100;
 
-          setTransfers(prev => ({
-            ...prev,
-            [fileId]: {
-              ...prev[fileId],
-              progress,
-              speed,
-              eta,
-            },
-          }));
-
           if (offset < file.size) {
+            // Throttle: only update React state every PROGRESS_THROTTLE_MS on sending side
+            const lastSendUpdate = sendProgressThrottleRef.current[fileId] || 0;
+            if (now - lastSendUpdate >= PROGRESS_THROTTLE_MS) {
+              sendProgressThrottleRef.current[fileId] = now;
+              setTransfers(prev => ({
+                ...prev,
+                [fileId]: { ...prev[fileId], progress, speed, eta },
+              }));
+            }
             setTimeout(readNextChunk, 1);
           } else {
+            delete sendProgressThrottleRef.current[fileId];
             conn.send({ type: 'file-end', id: fileId });
             setTransfers(prev => ({
               ...prev,
@@ -584,7 +609,7 @@ export function usePeer(options?: UsePeerOptions) {
         readNextChunk();
       });
     },
-    [connections, peersRegistry],
+    [],
   );
 
   const sendText = useCallback(

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, X } from 'lucide-react';
+import { Check, X, Share2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { playBubbleSound } from '../../lib/audio';
+import { RoomCodeDisplay } from '../layout/RoomCodeDisplay';
 
 interface ShareRoomModalProps {
   peerId: string;
@@ -15,12 +16,36 @@ export function ShareRoomModal({ peerId, onClose, showToast }: ShareRoomModalPro
 
   const shareUrl = `${window.location.origin}${window.location.pathname}?room=${peerId}`;
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    showToast('Link de convite copiado!', 'success');
+  const handleInvite = async () => {
     playBubbleSound();
-    setTimeout(() => setCopied(false), 2000);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'LiquidPeer',
+          text: 'Entre na minha sala no LiquidPeer para compartilharmos arquivos em tempo real!',
+          url: shareUrl,
+        });
+        showToast('Link compartilhado com sucesso!', 'success');
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          await fallbackCopyLink();
+        }
+      }
+    } else {
+      await fallbackCopyLink();
+    }
+  };
+
+  const fallbackCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      showToast('Link de convite copiado!', 'success');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast('Não foi possível copiar. Copie o link manualmente.', 'error');
+    }
   };
 
   return (
@@ -44,7 +69,7 @@ export function ShareRoomModal({ peerId, onClose, showToast }: ShareRoomModalPro
         <div className="space-y-0.5 mt-2">
           <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">Convidar Participantes</h2>
           <p className="text-white/40 text-[10px] sm:text-[11px] leading-relaxed px-2">
-            Escaneie o QR Code ou copie o link para adicionar até 6 dispositivos nesta sala.
+            Escaneie o QR Code ou compartilhe o link para adicionar até 6 dispositivos nesta sala.
           </p>
         </div>
 
@@ -62,31 +87,11 @@ export function ShareRoomModal({ peerId, onClose, showToast }: ShareRoomModalPro
 
         {/* Code display with staggered wobbly soap-bubbles */}
         <div className="w-full space-y-3 mt-1">
-          <div className="flex gap-1 sm:gap-2 justify-center">
-            {peerId.toUpperCase().split('').map((char, index) => {
-              const animationClass = index % 3 === 0
-                ? "animate-wobble-slow-1"
-                : index % 3 === 1
-                  ? "animate-wobble-slow-2"
-                  : "animate-wobble-slow-3";
-              return (
-                <div
-                  key={index}
-                  className={cn(
-                    "w-8 h-11 sm:w-10 sm:h-13 rounded-2xl flex items-center justify-center font-mono text-lg sm:text-xl font-extrabold text-sky-200 border border-white/20 bg-white/10 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.35),0_4px_10px_rgba(0,0,0,0.25)] relative overflow-hidden",
-                    animationClass
-                  )}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/[0.12] to-transparent pointer-events-none" />
-                  <span className="relative z-10">{char}</span>
-                </div>
-              );
-            })}
-          </div>
+          <RoomCodeDisplay code={peerId} />
 
-          {/* Copy Link Button */}
+          {/* Copy/Share Link Button */}
           <button
-            onClick={handleCopyLink}
+            onClick={handleInvite}
             className={cn(
               "liquid-glass-button px-5 py-2.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mx-auto transition-all duration-300 shadow-md rounded-full mt-2",
               copied ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]" : "",
@@ -98,7 +103,7 @@ export function ShareRoomModal({ peerId, onClose, showToast }: ShareRoomModalPro
               </>
             ) : (
               <>
-                <Copy className="w-3 h-3 text-white/60" /> Copiar Link de Convite
+                <Share2 className="w-3 h-3 text-white/60 animate-pulse" /> Convidar Amigos
               </>
             )}
           </button>

@@ -279,7 +279,9 @@ export function ConnectionTube({
       }
 
       nodesRef.current = nodes;
-      setNodesState([...nodes]);
+      // Physics runs every frame (60fps) but visual setState fires every other frame (~30fps).
+      // This halves the React re-render rate without affecting simulation accuracy.
+      const shouldRender = ticks % 2 === 0;
 
       // 3. Spawning and Moving Iridescent Particles (File Transfer Streams)
       let particles = [...particlesRef.current];
@@ -350,7 +352,7 @@ export function ConnectionTube({
       });
 
       particlesRef.current = remainingParticles;
-      setParticlesState(remainingParticles);
+      if (shouldRender) setParticlesState(remainingParticles);
 
       // 4. Trigger Major Burst Splash on File Transfer Completion
       activeTransfers.forEach(transfer => {
@@ -380,6 +382,13 @@ export function ConnectionTube({
         prevTransfersRef.current[transfer.id] = transfer.status;
       });
 
+      // Prune stale entries from prevTransfersRef to prevent unbounded growth
+      // across long sessions with many transfers.
+      const activeIds = new Set(activeTransfers.map(t => t.id));
+      for (const id of Object.keys(prevTransfersRef.current)) {
+        if (!activeIds.has(id)) delete prevTransfersRef.current[id];
+      }
+
       // 5. Update active splash burst states (fades out and descends slightly)
       let bursts = [...burstsRef.current, ...newBursts];
       bursts = bursts
@@ -394,7 +403,12 @@ export function ConnectionTube({
         .filter(b => b.alpha > 0);
 
       burstsRef.current = bursts;
-      setBurstsState(bursts);
+      // Always render when there are new completion bursts; otherwise follow the throttle
+      if (shouldRender || newBursts.length > 0) {
+        setNodesState([...nodes]);
+        setParticlesState(particlesRef.current);
+        setBurstsState(bursts);
+      }
 
       animFrameId = requestAnimationFrame(updatePhysics);
     };
@@ -598,7 +612,8 @@ export function ConnectionTube({
                 setHoveredPeerId(node.id);
               }}
               onDragLeave={() => {
-                setHoveredPeerId(null);
+                // Only clear hover if the leave event belongs to the currently hovered node
+                if (hoveredPeerId === node.id) setHoveredPeerId(null);
               }}
               onDrop={(e) => {
                 if (node.isLocal || node.id === 'invite') return;

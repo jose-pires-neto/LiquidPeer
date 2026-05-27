@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { AlertCircle, Coffee } from 'lucide-react';
 import type { ViewState } from './types';
 import { cn } from './lib/utils';
 import { playDropletSound, playBubbleSound, playFlowSound } from './lib/audio';
@@ -17,6 +17,24 @@ import { ShareRoomModal } from './components/views/ShareRoomModal';
 import { ROOM_CODE_LENGTH } from './constants';
 import { getSharedFiles, clearSharedFiles } from './lib/db';
 
+const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+    <path d="M9 18c-4.51 2-5-2-7-2" />
+  </svg>
+);
+
 function App() {
   const [view, setView] = useState<ViewState>('home');
   const [showScanner, setShowScanner] = useState(false);
@@ -24,6 +42,19 @@ function App() {
   const [sharedFiles, setSharedFiles] = useState<File[]>([]);
 
   const { toasts, showToast } = useToast();
+
+  const handleConnect = useCallback(() => {
+    setView('transfer');
+    setShowScanner(false);
+    showToast('Conectado com sucesso!', 'success');
+    playDropletSound();
+  }, [showToast]);
+
+  const handleDisconnect = useCallback(() => {
+    setView('home');
+    showToast('Conexão encerrada.', 'info');
+    playDropletSound();
+  }, [showToast]);
 
   const {
     peerId,
@@ -39,17 +70,8 @@ function App() {
     sendText,
     disconnect,
   } = usePeer({
-    onConnect: () => {
-      setView('transfer');
-      setShowScanner(false);
-      showToast('Conectado com sucesso!', 'success');
-      playDropletSound();
-    },
-    onDisconnect: () => {
-      setView('home');
-      showToast('Conexão encerrada.', 'info');
-      playDropletSound();
-    },
+    onConnect: handleConnect,
+    onDisconnect: handleDisconnect,
   });
 
   const roomCode = peerId && peerId.length === ROOM_CODE_LENGTH
@@ -171,13 +193,41 @@ function App() {
   };
 
   return (
-    <div className="min-h-dvh flex items-center justify-center safe-area-container relative select-none overflow-hidden">
+    <div className="min-h-dvh flex flex-col items-center justify-center safe-area-container relative select-none overflow-hidden py-8">
       {/* Liquid Ambient Glow Blobs */}
       <div className="absolute top-1/4 left-1/4 w-48 sm:w-72 h-48 sm:h-72 bg-sky-500/10 rounded-full blur-[80px] sm:blur-[120px] animate-glow-1 pointer-events-none z-0" />
       <div className="absolute bottom-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-blue-600/10 rounded-full blur-[100px] sm:blur-[140px] animate-glow-2 pointer-events-none z-0" />
+      <div className="absolute bottom-10 left-10 w-56 sm:w-80 h-56 sm:h-80 bg-emerald-500/4 rounded-full blur-[90px] sm:blur-[130px] animate-glow-1 pointer-events-none z-0" style={{ animationDelay: '-5s' }} />
+
+      {/* Background Floating Iridescent Bubbles (Frutiger Aero Dark Theme) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute bottom-[-100px] left-[5%] w-10 h-10 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '22s', animationDelay: '0s' }} />
+        <div className="absolute bottom-[-100px] left-[20%] w-16 h-16 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '18s', animationDelay: '3s' }} />
+        <div className="absolute bottom-[-100px] left-[35%] w-8 h-8 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '25s', animationDelay: '1s' }} />
+        <div className="absolute bottom-[-100px] left-[50%] w-12 h-12 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '20s', animationDelay: '5s' }} />
+        <div className="absolute bottom-[-100px] left-[65%] w-6 h-6 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '28s', animationDelay: '2s' }} />
+        <div className="absolute bottom-[-100px] left-[80%] w-14 h-14 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '16s', animationDelay: '4s' }} />
+        <div className="absolute bottom-[-100px] left-[90%] w-10 h-10 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '24s', animationDelay: '7s' }} />
+        
+        {/* Extra staggered bubbles */}
+        <div className="absolute bottom-[-100px] left-[15%] w-12 h-12 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '21s', animationDelay: '9s' }} />
+        <div className="absolute bottom-[-100px] left-[45%] w-7 h-7 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '26s', animationDelay: '6s' }} />
+        <div className="absolute bottom-[-100px] left-[75%] w-18 h-18 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '19s', animationDelay: '8s' }} />
+      </div>
 
       {/* Floating Glass Toasts */}
       <ToastContainer toasts={toasts} />
+
+      {/* LiquidPeer Title (Only on Home/Initial Views, Hidden in TransferView) */}
+      {view !== 'transfer' && (
+        <div className="w-full max-w-md flex justify-center mb-6 animate-banner-wobble z-10 px-2">
+          <div className="liquid-glass-banner px-8 py-3 rounded-[28px] w-full text-center select-none cursor-pointer">
+            <h1 className="text-3xl sm:text-4xl tracking-widest bg-gradient-to-r from-white via-sky-200 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(14,165,233,0.3)] font-bubble">
+              LiquidPeer
+            </h1>
+          </div>
+        </div>
+      )}
 
       <main
         className={cn(
@@ -196,7 +246,6 @@ function App() {
         <Header
           peerState={peerState}
           onDisconnect={disconnect}
-          onLogoClick={handleGoHome}
           onInviteClick={() => setShowInviteModal(true)}
         />
 
@@ -264,6 +313,31 @@ function App() {
           onClose={() => setShowInviteModal(false)}
           showToast={showToast}
         />
+      )}
+
+      {/* Footer Links (Only on Home/Initial Views, Hidden in TransferView) */}
+      {view !== 'transfer' && (
+        <div className="w-full max-w-md flex justify-center gap-3 mt-6 z-10 px-2 animate-in fade-in duration-300">
+          {/* GitHub Button */}
+          <a
+            href="https://github.com/jose-pires-neto/LiquidPeer"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full bg-white/[0.03] border border-white/5 hover:bg-white/[0.08] hover:border-white/15 hover:scale-105 active:scale-95 text-white/60 hover:text-white transition-all duration-300 shadow-sm cursor-pointer"
+          >
+            <GithubIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/50" /> GitHub
+          </a>
+
+          {/* Buy Me a Coffee Button */}
+          <a
+            href="https://buymeacoffee.com/josepires.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full bg-white/[0.03] border border-white/5 hover:bg-white/[0.08] hover:border-white/15 hover:scale-105 active:scale-95 text-white/60 hover:text-white transition-all duration-300 shadow-sm cursor-pointer"
+          >
+            <Coffee className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300/80 animate-pulse" /> Buy Me a Coffee
+          </a>
+        </div>
       )}
     </div>
   );

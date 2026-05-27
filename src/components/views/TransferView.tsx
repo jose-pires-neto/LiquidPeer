@@ -29,17 +29,18 @@ export function TransferView({
   const [activeTab, setActiveTab] = useState<TabState>('transfer');
   const [clearedIds, setClearedIds] = useState<Set<string>>(new Set());
 
-  // Force activeTab switch on desktop resize
+  // Switch to 'files' tab automatically on desktop — uses functional setState to
+  // avoid capturing stale activeTab and accumulating multiple resize listeners.
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024 && activeTab === 'transfer') {
-        setActiveTab('files');
+      if (window.innerWidth >= 1024) {
+        setActiveTab(prev => prev === 'transfer' ? 'files' : prev);
       }
     };
     window.addEventListener('resize', handleResize);
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
-  }, [activeTab]);
+  }, []);
 
   const visibleTransfers = useMemo(
     () => transfers.filter(t => !clearedIds.has(t.id)),

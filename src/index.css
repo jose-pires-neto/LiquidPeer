@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'GameBubble';
+  src: url('/fonts/Game Bubble.ttf') format('truetype'),
+       url('/fonts/Game Bubble.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-display: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-bubble: "GameBubble", sans-serif;
 
   /* Premium animations */
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -55,6 +65,54 @@
     }
     50% {
       border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+    }
+  }
+
+  --animate-banner-wobble: banner-wobble 8s ease-in-out infinite;
+
+  @keyframes banner-wobble {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+      border-radius: 24px 28px 24px 28px / 28px 24px 28px 24px;
+    }
+    33% {
+      transform: translateY(-4px) scale(1.02, 0.98);
+      border-radius: 28px 24px 28px 24px / 24px 28px 24px 28px;
+    }
+    66% {
+      transform: translateY(-2px) scale(0.98, 1.02);
+      border-radius: 26px 26px 26px 26px / 26px 26px 26px 26px;
+    }
+  }
+
+  --animate-bubble-drift: bubble-drift 20s linear infinite;
+
+  @keyframes bubble-drift {
+    0% {
+      transform: translateY(0) translateX(0) scale(0.5) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.55;
+    }
+    50% {
+      transform: translateY(-55vh) translateX(30px) scale(1.05) rotate(180deg);
+    }
+    85% {
+      opacity: 0.55;
+      transform: translateY(-95vh) translateX(-15px) scale(1) rotate(300deg);
+    }
+    90% {
+      transform: translateY(-100vh) translateX(-10px) scale(1.2) rotate(320deg);
+      opacity: 0.35;
+    }
+    93% {
+      transform: translateY(-100vh) translateX(-10px) scale(0) rotate(320deg);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(-115vh) translateX(0) scale(0) rotate(360deg);
+      opacity: 0;
     }
   }
 }
@@ -161,6 +219,44 @@
     box-shadow: 
       0 2px 8px rgba(0, 0, 0, 0.1),
       inset 0 1px 1px 0px rgba(255, 255, 255, 0.15);
+  }
+
+  /* Liquid Glass Banner (Volumetric 3D Glass capsule for title) */
+  .liquid-glass-banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.15) 0%, rgba(56, 189, 248, 0.04) 45%, rgba(2, 132, 199, 0.1) 75%, rgba(3, 105, 161, 0.2) 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 
+      0 12px 30px -5px rgba(0, 0, 0, 0.4),
+      inset 0 -6px 15px -5px rgba(3, 105, 161, 0.35),
+      inset 0 6px 12px -5px rgba(255, 255, 255, 0.35),
+      0 0 15px rgba(56, 189, 248, 0.15);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .liquid-glass-banner::before {
+    content: '';
+    position: absolute;
+    top: 6%;
+    left: 8%;
+    right: 8%;
+    height: 30%;
+    border-radius: 20px 20px 10px 10px / 20px 20px 10px 10px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+  }
+
+  .liquid-glass-banner:hover {
+    transform: scale(1.03) translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 
+      0 18px 35px -5px rgba(0, 0, 0, 0.45),
+      0 0 25px rgba(56, 189, 248, 0.25);
   }
 
   /* Liquid Glass Inputs */
