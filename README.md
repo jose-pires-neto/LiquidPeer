@@ -1,74 +1,90 @@
-# LiquidPeer 💧 - Compartilhamento P2P Instantâneo no Navegador
+# LiquidPeer 💧
 
-O **LiquidPeer** é um aplicativo web moderno, minimalista e seguro para compartilhamento direto de arquivos de ponta a ponta (Peer-to-Peer) entre dispositivos, utilizando o navegador e sem a necessidade de servidores intermediários de armazenamento.
+### Instant, Secure, Peer-to-Peer File Sharing Directly in Your Browser.
 
-Inspirado na fluidez e simplicidade do *AirDrop* e no **Liquid Glass**, o projeto conta com uma interface premium baseada nos conceitos de **Liquid Glass (Vidro Líquido)**, com efeitos de refração de vidro físico, física de fluidos e transições responsivas de alta fidelidade.
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-FF813F?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/josepires.dev)
+[![GitHub stars](https://img.shields.io/github/stars/jose-pires-neto/LiquidPeer.svg?style=for-the-badge&label=Stars&color=blue)](https://github.com/jose-pires-neto/LiquidPeer/stargazers)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
----
+**LiquidPeer** is a modern, serverless web application designed for direct, secure peer-to-peer (P2P) file sharing. By leveraging WebRTC protocols, files are transferred directly between devices' browsers without passing through any intermediate storage servers.
 
-## ✨ Funcionalidades Principais
-
-- 🚀 **Transferência P2P Direta (WebRTC)**: Conexão direta criptografada entre dois dispositivos utilizando PeerJS. Seus arquivos não passam por nenhum servidor de terceiros.
-- 📸 **Scanner de QR Code via Webcam**: Integração nativa de câmera utilizando a biblioteca `html5-qrcode` para conexão instantânea entre celulares e computadores.
-- 🌊 **Animações de Fluidos Físicos (Liquid Animations)**:
-  - **Tubo de Fluxo**: Um duto de vidro 3D onde bolhas líquidas flutuam indicando em tempo real o fluxo e o sentido da transferência.
-  - **Progresso Ondulado**: Barras de progresso estilo frascos cilíndricos de vidro que se preenchem com ondas líquidas oscilantes em direções opostas.
-- 📊 **Métricas de Rede em Tempo Real**: Cálculo preciso de velocidade de transferência (ex: MB/s) e estimativa de tempo restante (ETA).
-- 🎨 **Estética Liquid Glass Premium**: Design minimalista e sóbrio em tons escuros de azul e branco translúcido, com bordas refratativas 3D e sombras volumétricas realistas.
-- ♿ **Acessibilidade e SEO**: Desenvolvido com tags semânticas, controle estrito de foco, suporte a leitores de tela (`sr-only` labels) e metadados Open Graph.
+Inspired by the simplicity of *AirDrop* and the nostalgic **Frutiger Aero** era, LiquidPeer features a premium **Liquid Glass** interface, combining realistic skeuomorphic glass refractions, organic liquid animations, and physics-driven micro-interactions.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## ✨ Features
+
+- 🚀 **Direct P2P File Transfer (WebRTC)**: Fully secure, end-to-end encrypted direct data channels powered by PeerJS. Your files are never uploaded or stored on any server.
+- 📸 **Camera QR Code Scanner**: Scan QR codes directly with your device's webcam to connect instantly, eliminating manual room code entry (powered by `html5-qrcode`).
+- 🫧 **Iridescent Soap Bubbles**: Slow-drifting, GPU-accelerated background bubbles that rise and pop naturally, paired with a soft organic emerald-teal ambient glow.
+- 🌊 **Fluid Physics Animations**:
+  - **Flow Tube**: A volumetric 3D glass tube where liquid bubble particles flow in real-time, matching the speed and direction of your file transfers.
+  - **Cylinder Progress**: Circular glass vials filled with wavy, oscillating liquid that rises to indicate transfer percentage.
+- 📊 **Real-time Transfer Metrics**: Precise MB/s transfer speed calculation and estimated time of arrival (ETA).
+- 📝 **Markdown Chat Notes**: Share notes and code blocks instantly through WebRTC data channels, complete with markdown rendering and automatic syntax highlighting.
+- ♿ **Responsive, SEO & Accessible**: Semantic HTML structure, screen reader support (`sr-only` labels), keyboard focus control, Open Graph tags, and mobile-first responsiveness.
+
+---
+
+## 🛠️ Tech Stack
 
 - **Core**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **Estilização**: [Tailwind CSS v4](https://tailwindcss.com/)
-- **Protocolo P2P**: [PeerJS](https://peerjs.com/) (WebRTC Data Channels)
-- **Processamento de QR**: [html5-qrcode](https://github.com/mebjas/html5-qrcode)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **P2P Protocol**: [PeerJS](https://peerjs.com/) (WebRTC Data Channels)
+- **Camera Scanning**: [html5-qrcode](https://github.com/mebjas/html5-qrcode)
 - **Bundler**: [Vite](https://vite.dev/)
-- **Ícones**: [Lucide React](https://lucide.dev/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Markdown & Syntax**: [Prism React Renderer](https://github.com/FormidableLabs/prism-react-renderer) + [React Markdown](https://github.com/remarkjs/react-markdown)
 
 ---
 
-## ⚙️ Como Funciona por Baixo dos Panos
+## ⚙️ How It Works Under the Hood
 
-1. **Sinalização**: O **Host** gera um identificador de sala exclusivo de 6 caracteres e inicializa o Peer. Um servidor de sinalização do PeerJS apenas auxilia os dois dispositivos a se encontrarem inicialmente.
-2. **Conexão Direta**: Uma vez estabelecido o contato (seja via leitura de QR Code ou digitação manual do código no **Client**), os Peers abrem um canal de dados direto WebRTC de ponta a ponta.
-3. **Fragmentação de Arquivos**: Os arquivos selecionados são fatiados em blocos (chunks) binários estáveis de 16KB para garantir alta confiabilidade na entrega e baixo consumo de memória no navegador.
-4. **Buffer & Download**: O receptor acumula as fatias binárias no buffer e reconstrói o arquivo localmente gerando um Blob pronto para download imediato.
+1. **Signaling**: The **Host** generates a random 6-character room identifier and initializes the PeerJS client. A lightweight signaling server is used only to exchange WebRTC metadata and help peers locate each other.
+2. **Direct Connection**: Once a connection is established (via QR code scan or manual entry on the **Client**), the signaling server is bypassed, and a direct end-to-peer data channel is opened.
+3. **File Chunking**: To ensure high reliability, low browser memory consumption, and prevent packet loss, files are fragmented into binary chunks of 16KB before transmission.
+4. **Buffer & Reassembly**: The receiver accumulates the binary chunks in a local buffer and reconstructs the file once all chunks arrive, generating a Blob ready for immediate download.
 
 ---
 
-## 🚀 Como Executar Localmente
+## 🚀 Local Development
 
-### Pré-requisitos
-Certifique-se de ter o [Node.js](https://nodejs.org/) instalado em sua máquina.
+### Prerequisites
+Make sure you have [Node.js](https://nodejs.org/) installed.
 
-### 1. Clonar o Repositório
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/jose-pires-neto/LiquidPeer.git
 cd LiquidPeer
 ```
 
-### 2. Instalar Dependências
+### 2. Install Dependencies
 ```bash
 npm install
 ```
 
-### 3. Executar em Modo de Desenvolvimento
+### 3. Start Development Server
 ```bash
 npm run dev
 ```
-Abra o link `http://localhost:5173` no seu navegador. Abra duas abas ou escaneie o QR Code em outro dispositivo na mesma rede local para testar!
+Open `http://localhost:5173` in your browser. Open multiple tabs or scan the QR Code on another device in the same local network to test!
 
-### 4. Compilar para Produção (Build)
+### 4. Build for Production
 ```bash
 npm run build
 ```
-O build estático pronto para deploy será gerado no diretório `dist/`.
+Static production files will be built in the `dist/` directory.
 
 ---
 
-## 📄 Licença
+## 🤝 Contributing
 
-Este projeto é de código aberto e está licenciado sob a licença MIT. Sinta-se livre para usar, modificar e distribuir.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
