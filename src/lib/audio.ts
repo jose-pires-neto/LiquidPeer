@@ -6,11 +6,24 @@ const getAudioContextClass = (): AudioContextConstructor | null => {
     null;
 };
 
+// Singleton AudioContext — browsers limit simultaneous contexts (~6 max).
+// Reusing one context across all sound calls prevents silent failures after
+// many transfers and avoids the "AudioContext was not allowed to start" warning.
+let _sharedCtx: AudioContext | null = null;
+
+const getAudioContext = (): AudioContext | null => {
+  if (_sharedCtx && _sharedCtx.state !== 'closed') return _sharedCtx;
+  const AudioCtx = getAudioContextClass();
+  if (!AudioCtx) return null;
+  _sharedCtx = new AudioCtx();
+  return _sharedCtx;
+};
+
 export const playDropletSound = (): void => {
   try {
-    const AudioCtx = getAudioContextClass();
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -28,15 +41,15 @@ export const playDropletSound = (): void => {
     osc.start();
     osc.stop(ctx.currentTime + 0.15);
   } catch (e) {
-    console.error("Audio error", e);
+    console.error('Audio error', e);
   }
 };
 
 export const playBubbleSound = (): void => {
   try {
-    const AudioCtx = getAudioContextClass();
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -53,15 +66,14 @@ export const playBubbleSound = (): void => {
     osc.start();
     osc.stop(ctx.currentTime + 0.12);
   } catch (e) {
-    console.error("Audio error", e);
+    console.error('Audio error', e);
   }
 };
 
 export const playFlowSound = (): void => {
   try {
-    const AudioCtx = getAudioContextClass();
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getAudioContext();
+    if (!ctx) return;
 
     for (let i = 0; i < 4; i++) {
       const time = ctx.currentTime + i * 0.05;
@@ -84,6 +96,6 @@ export const playFlowSound = (): void => {
       osc.stop(time + 0.07);
     }
   } catch (e) {
-    console.error("Audio error", e);
+    console.error('Audio error', e);
   }
 };

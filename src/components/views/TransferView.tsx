@@ -10,32 +10,37 @@ import { ChatPanel } from '../chat/ChatPanel';
 interface TransferViewProps {
   transfers: FileTransfer[];
   messages: PeerMessage[];
-  onSendFile: (file: File) => void;
+  peers: { id: string; deviceType: 'mobile' | 'desktop'; osName: string; initials: string }[];
+  onSendFile: (file: File, targetPeerId?: string) => void;
   onSendText: (text: string) => void;
   showToast: (message: string, type: 'info' | 'success' | 'error') => void;
+  onInviteClick?: () => void;
 }
 
 export function TransferView({
   transfers,
   messages,
+  peers,
   onSendFile,
   onSendText,
   showToast,
+  onInviteClick,
 }: TransferViewProps) {
   const [activeTab, setActiveTab] = useState<TabState>('transfer');
   const [clearedIds, setClearedIds] = useState<Set<string>>(new Set());
 
-  // Force activeTab switch on desktop resize
+  // Switch to 'files' tab automatically on desktop — uses functional setState to
+  // avoid capturing stale activeTab and accumulating multiple resize listeners.
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024 && activeTab === 'transfer') {
-        setActiveTab('files');
+      if (window.innerWidth >= 1024) {
+        setActiveTab(prev => prev === 'transfer' ? 'files' : prev);
       }
     };
     window.addEventListener('resize', handleResize);
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
-  }, [activeTab]);
+  }, []);
 
   const visibleTransfers = useMemo(
     () => transfers.filter(t => !clearedIds.has(t.id)),
@@ -72,14 +77,14 @@ export function TransferView({
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-300 w-full">
       {/* Mobile Tab Bar */}
-      <div className="flex lg:hidden items-center justify-center p-1 bg-white/[0.03] border border-white/5 rounded-2xl mb-3 sm:mb-5 shadow-inner">
+      <div className="flex lg:hidden items-center justify-center p-1 bg-white/[0.02] border border-white/5 rounded-full mb-3 sm:mb-5 shadow-[0_4px_15px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.05)] backdrop-blur-md">
         <button
           onClick={() => setActiveTab('transfer')}
           className={cn(
-            "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 cursor-pointer",
+            "flex-1 py-3 text-xs font-bold rounded-full transition-all duration-300 cursor-pointer",
             activeTab === 'transfer'
-              ? "bg-white/10 text-sky-300 shadow-sm border border-white/5"
-              : "text-white/40 hover:text-white/60",
+              ? "bg-white/10 text-sky-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_8px_rgba(56,189,248,0.15)] border border-white/10"
+              : "text-white/40 hover:text-white/60 hover:bg-white/[0.01]",
           )}
         >
           Transferir
@@ -87,15 +92,15 @@ export function TransferView({
         <button
           onClick={() => setActiveTab('files')}
           className={cn(
-            "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 relative cursor-pointer",
+            "flex-1 py-3 text-xs font-bold rounded-full transition-all duration-300 relative cursor-pointer",
             activeTab === 'files'
-              ? "bg-white/10 text-sky-300 shadow-sm border border-white/5"
-              : "text-white/40 hover:text-white/60",
+              ? "bg-white/10 text-sky-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_8px_rgba(56,189,248,0.15)] border border-white/10"
+              : "text-white/40 hover:text-white/60 hover:bg-white/[0.01]",
           )}
         >
           Arquivos
           {visibleTransfers.length > 0 && (
-            <span className="absolute top-1 right-2 bg-sky-500 text-[8px] font-extrabold text-white w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#050814]">
+            <span className="absolute top-1.5 right-2 bg-sky-500 text-[8px] font-extrabold text-white w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#050814]">
               {visibleTransfers.length}
             </span>
           )}
@@ -103,15 +108,15 @@ export function TransferView({
         <button
           onClick={() => setActiveTab('chat')}
           className={cn(
-            "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 relative cursor-pointer",
+            "flex-1 py-3 text-xs font-bold rounded-full transition-all duration-300 relative cursor-pointer",
             activeTab === 'chat'
-              ? "bg-white/10 text-sky-300 shadow-sm border border-white/5"
-              : "text-white/40 hover:text-white/60",
+              ? "bg-white/10 text-sky-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_8px_rgba(56,189,248,0.15)] border border-white/10"
+              : "text-white/40 hover:text-white/60 hover:bg-white/[0.01]",
           )}
         >
           Notas
           {messages.length > 0 && (
-            <span className="absolute top-1 right-2 bg-sky-500 text-[8px] font-extrabold text-white w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#050814]">
+            <span className="absolute top-1.5 right-2 bg-sky-500 text-[8px] font-extrabold text-white w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#050814]">
               {messages.length}
             </span>
           )}
@@ -127,14 +132,25 @@ export function TransferView({
             activeTab === 'transfer' ? "flex" : "hidden lg:flex",
           )}
         >
-          <ConnectionTube activeTransfer={activeTransfer} isSending={isSending ?? false} />
+          <ConnectionTube 
+            activeTransfer={activeTransfer} 
+            isSending={isSending ?? false} 
+            transfers={transfers}
+            peers={peers}
+            onSendFile={onSendFile}
+            onInviteClick={onInviteClick}
+          />
           <DropZone onFilesSelected={handleFilesSelected} />
 
-          <div className="p-3.5 liquid-glass-card border border-white/5 text-center flex flex-col justify-center gap-1.5">
-            <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest">
+          <div className="relative p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/[0.02] border border-white/10 text-center flex flex-col justify-center gap-1 overflow-hidden backdrop-blur-md shadow-[0_10px_25px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.15)]">
+            {/* Specular sheen line/gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] to-transparent pointer-events-none" />
+            <div className="absolute top-0 left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+            
+            <span className="text-[8px] font-extrabold text-sky-300/40 uppercase tracking-widest relative z-10">
               Canal WebRTC Seguro
             </span>
-            <p className="text-[9px] text-white/50 leading-relaxed">
+            <p className="text-[9.5px] text-white/50 leading-relaxed relative z-10 font-medium">
               Conexão criptografada de ponta a ponta. Nenhum dado toca nossos servidores.
             </p>
           </div>
@@ -148,15 +164,15 @@ export function TransferView({
           )}
         >
           {/* Desktop Tab Header */}
-          <div className="hidden lg:flex items-center justify-between border-b border-white/5 pb-3 mb-5">
-            <div className="flex gap-2">
+          <div className="hidden lg:flex items-center justify-between pb-3 mb-5 border-b border-white/5">
+            <div className="flex gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-full shadow-inner backdrop-blur-sm">
               <button
                 onClick={() => setActiveTab('files')}
                 className={cn(
-                  "text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all cursor-pointer",
+                  "text-[10px] font-extrabold uppercase tracking-wider px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer",
                   activeTab === 'files'
-                    ? "border-sky-500/20 bg-sky-500/10 text-sky-300 shadow-sm"
-                    : "border-transparent text-white/40 hover:text-white/60",
+                    ? "border-white/10 bg-white/10 text-sky-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_8px_rgba(56,189,248,0.15)]"
+                    : "border-transparent text-white/40 hover:text-white/70 hover:bg-white/[0.01]",
                 )}
               >
                 Arquivos ({visibleTransfers.length})
@@ -164,15 +180,15 @@ export function TransferView({
               <button
                 onClick={() => setActiveTab('chat')}
                 className={cn(
-                  "text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all relative cursor-pointer",
+                  "text-[10px] font-extrabold uppercase tracking-wider px-4 py-2 rounded-full border transition-all duration-300 relative cursor-pointer",
                   activeTab === 'chat'
-                    ? "border-sky-500/20 bg-sky-500/10 text-sky-300 shadow-sm"
-                    : "border-transparent text-white/40 hover:text-white/60",
+                    ? "border-white/10 bg-white/10 text-sky-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_8px_rgba(56,189,248,0.15)]"
+                    : "border-transparent text-white/40 hover:text-white/70 hover:bg-white/[0.01]",
                 )}
               >
                 Notas / Clipboard
                 {messages.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-sky-500 text-[8px] font-extrabold text-white w-4 h-4 rounded-full flex items-center justify-center border border-[#050814] animate-pulse">
+                  <span className="absolute -top-1.5 -right-1 bg-sky-500 text-[8px] font-extrabold text-white w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#050814] animate-pulse">
                     {messages.length}
                   </span>
                 )}

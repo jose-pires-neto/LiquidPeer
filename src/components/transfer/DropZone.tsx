@@ -39,10 +39,10 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
   return (
     <div
       className={cn(
-        "border border-dashed rounded-2xl flex flex-col items-center justify-center min-h-[140px] sm:min-h-[170px] lg:min-h-[200px] p-4 sm:p-6 transition-all duration-300 relative overflow-hidden",
+        "border flex flex-col items-center justify-center min-h-[140px] sm:min-h-[170px] lg:min-h-[200px] p-4 sm:p-6 transition-all duration-500 relative overflow-hidden",
         isDragging
-          ? "border-sky-400 bg-sky-400/5 scale-[1.01]"
-          : "border-white/5 bg-black/20 hover:bg-white/[0.01]",
+          ? "border-sky-400/45 bg-sky-500/10 scale-[1.02] shadow-[0_0_35px_rgba(56,189,248,0.25)] animate-liquid-ripple rounded-[42%_58%_72%_28%/52%_62%_38%_48%] border-solid"
+          : "border-dashed border-white/10 bg-white/[0.01] hover:bg-white/[0.03] hover:border-white/20 rounded-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]",
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -59,20 +59,21 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
       />
 
       {isDragging ? (
-        <div className="absolute inset-0 bg-[#050814]/85 backdrop-blur-[6px] flex flex-col items-center justify-center pointer-events-none z-30 animate-in fade-in duration-300">
-          <div className="absolute w-24 h-24 rounded-full bg-sky-500/10 border border-sky-400/30 animate-liquid-ripple flex items-center justify-center">
-            <UploadCloud className="w-8 h-8 text-sky-300 animate-bounce" />
+        <div className="absolute inset-0 bg-[#040712]/75 backdrop-blur-[4px] flex flex-col items-center justify-center pointer-events-none z-30 animate-in fade-in duration-300">
+          <div className="w-18 h-18 rounded-full bg-sky-500/25 border border-sky-400/40 animate-wobble-slow-2 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.3),inset_0_4px_10px_rgba(255,255,255,0.2)]">
+            <UploadCloud className="w-7 h-7 text-white animate-bounce" />
           </div>
-          <span className="text-[11px] font-bold text-sky-200 mt-6 tracking-wide">
-            Solte para Enviar Líquido
+          <span className="text-[11px] font-bold text-sky-200 mt-5 tracking-wide">
+            Solte para Enviar
           </span>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center pointer-events-none">
-          <div className="p-3 rounded-2xl bg-white/[0.02] mb-3.5 border border-white/5 shadow-inner">
-            <UploadCloud className="w-7 h-7 text-white/35 animate-float" />
+          {/* Miniature soap bubble for resting upload icon */}
+          <div className="w-12 h-12 rounded-full liquid-soap-bubble flex items-center justify-center mb-3.5 animate-wobble-slow-1 shadow-[0_4px_12px_rgba(0,0,0,0.2)] border border-white/15">
+            <UploadCloud className="w-5.5 h-5.5 text-sky-200 opacity-90" />
           </div>
-          <h3 className="text-sm sm:text-xs font-semibold mb-1 text-white/80">Arraste arquivos aqui</h3>
+          <h3 className="text-sm sm:text-xs font-bold mb-1 text-white/80">Arraste arquivos aqui</h3>
           <p className="text-[10px] text-white/35">ou clique para navegar</p>
         </div>
       )}

@@ -63,20 +63,31 @@ export function JoinView({ peerState, onSubmit, onBack }: JoinViewProps) {
             {Array.from({ length: ROOM_CODE_LENGTH }).map((_, idx) => {
               const char = joinId[idx] || '';
               const isFocused = joinId.length === idx && isInputFocused;
+              
+              // Stagger wobble classes for active focus slots
+              const animClass = isFocused 
+                ? (idx % 3 === 0 ? "animate-wobble-slow-1" : idx % 3 === 1 ? "animate-wobble-slow-2" : "animate-wobble-slow-3") 
+                : "";
+
               return (
                 <div
                   key={idx}
                   className={cn(
-                    "w-8 h-11 sm:w-10 sm:h-13 rounded-xl flex items-center justify-center font-mono text-lg sm:text-xl font-extrabold transition-all duration-200 border",
+                    "w-8 h-11 sm:w-10 sm:h-13 rounded-2xl flex items-center justify-center font-mono text-lg sm:text-xl font-extrabold transition-all duration-300 border relative overflow-hidden",
                     isFocused
-                      ? "border-sky-500 bg-sky-500/10 shadow-[0_0_10px_rgba(56,189,248,0.25)] scale-105"
+                      ? "border-sky-400 bg-sky-500/15 text-sky-200 shadow-[0_0_15px_rgba(56,189,248,0.3),inset_0_1px_1.5px_rgba(255,255,255,0.35)] scale-105"
                       : char
-                        ? "border-white/20 bg-white/5 text-white"
-                        : "border-white/5 bg-black/40 text-white/20",
+                        ? "border-white/20 bg-white/10 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_4px_10px_rgba(0,0,0,0.2)]"
+                        : "border-white/5 bg-white/[0.01] text-white/20 shadow-inner",
+                    animClass
                   )}
                 >
-                  {char}
-                  {isFocused && <span className="animate-pulse text-sky-400">|</span>}
+                  {/* Glossy highlight inside active bubble */}
+                  {(isFocused || char) && (
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.12] to-transparent pointer-events-none" />
+                  )}
+                  <span className="relative z-10">{char}</span>
+                  {isFocused && <span className="animate-pulse text-sky-400 absolute z-20">|</span>}
                 </div>
               );
             })}
@@ -86,7 +97,7 @@ export function JoinView({ peerState, onSubmit, onBack }: JoinViewProps) {
         <button
           type="submit"
           disabled={joinId.length < ROOM_CODE_LENGTH || peerState === 'connecting'}
-          className="w-full liquid-glass-button py-3.5 text-xs flex justify-center items-center gap-1.5 disabled:opacity-40 cursor-pointer"
+          className="w-full liquid-glass-button py-3.5 text-xs flex justify-center items-center gap-1.5 disabled:opacity-40 cursor-pointer rounded-full"
         >
           {peerState === 'connecting' ? (
             <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -100,9 +111,9 @@ export function JoinView({ peerState, onSubmit, onBack }: JoinViewProps) {
 
       <button
         onClick={onBack}
-        className="text-[10px] text-white/40 hover:text-white/80 flex items-center gap-1 transition-colors cursor-pointer"
+        className="px-4 py-2 text-[10px] uppercase font-bold tracking-wider rounded-full bg-white/[0.03] border border-white/5 hover:bg-white/[0.08] hover:border-white/15 text-white/50 hover:text-white/80 transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm"
       >
-        <ArrowLeft className="w-3.5 h-3.5" /> Voltar
+        <ArrowLeft className="w-3 h-3" /> Voltar
       </button>
     </div>
   );

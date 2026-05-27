@@ -62,27 +62,35 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       </div>
 
       {error ? (
-        <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 text-center space-y-2 max-w-[260px] sm:max-w-[280px]">
-          <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
-          <p className="text-rose-200 text-[11px] leading-relaxed">{error}</p>
+        <div className="p-4 rounded-2xl bg-rose-500/[0.03] border border-rose-500/20 text-center space-y-2 max-w-[260px] sm:max-w-[280px] shadow-[0_8px_20px_rgba(244,63,94,0.1),inset_0_1px_1px_rgba(255,255,255,0.05)] backdrop-blur-sm relative overflow-hidden">
+          {/* Specular sheen on error card */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
+          <AlertCircle className="w-8 h-8 text-rose-400 mx-auto relative z-10" />
+          <p className="text-rose-200 text-[11px] leading-relaxed relative z-10 font-medium">{error}</p>
         </div>
       ) : (
-        <div className="relative w-full max-w-[220px] sm:max-w-[260px] aspect-square rounded-2xl overflow-hidden border border-white/10 bg-black/50 shadow-2xl flex items-center justify-center">
-          <div className="absolute inset-5 border border-white/5 rounded-lg pointer-events-none z-20">
-            <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t border-l border-sky-400" />
-            <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t border-r border-sky-400" />
-            <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b border-l border-sky-400" />
-            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b border-r border-sky-400" />
+        <div className="relative w-full max-w-[220px] sm:max-w-[260px] aspect-square rounded-[36px] overflow-hidden border border-white/20 bg-[#040712]/50 shadow-[0_15px_35px_rgba(0,0,0,0.4),inset_0_-8px_20px_rgba(3,105,161,0.2),inset_0_8px_16px_rgba(255,255,255,0.2)] backdrop-blur-md flex items-center justify-center">
+          {/* Glowing scanner corner frame */}
+          <div className="absolute inset-6 border border-sky-400/25 rounded-[28px] pointer-events-none z-20 shadow-[0_0_15px_rgba(56,189,248,0.1),inset_0_0_15px_rgba(56,189,248,0.1)]">
+            <div className="absolute top-0 left-0 w-4.5 h-4.5 border-t-2 border-l-2 border-sky-400 rounded-tl-xl" />
+            <div className="absolute top-0 right-0 w-4.5 h-4.5 border-t-2 border-r-2 border-sky-400 rounded-tr-xl" />
+            <div className="absolute bottom-0 left-0 w-4.5 h-4.5 border-b-2 border-l-2 border-sky-400 rounded-bl-xl" />
+            <div className="absolute bottom-0 right-0 w-4.5 h-4.5 border-b-2 border-r-2 border-sky-400 rounded-br-xl" />
           </div>
+          {/* Laser scanning line */}
+          <div className="absolute left-6 right-6 h-[2.5px] bg-gradient-to-r from-transparent via-sky-400/70 to-transparent top-1/2 -translate-y-1/2 animate-pulse z-20 pointer-events-none shadow-[0_0_12px_rgba(56,189,248,0.5)]" />
+          {/* Glass glare highlight */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/5 via-transparent to-white/10 pointer-events-none z-20" />
+          
           <div id="qr-reader" className="w-full h-full object-cover z-10" />
         </div>
       )}
 
       <button
         onClick={onClose}
-        className="text-[11px] text-white/40 hover:text-white/80 flex items-center gap-1 transition-colors cursor-pointer"
+        className="px-4 py-2 text-[10px] uppercase font-bold tracking-wider rounded-full bg-white/[0.03] border border-white/5 hover:bg-white/[0.08] hover:border-white/15 text-white/50 hover:text-white/80 transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm"
       >
-        <ArrowLeft className="w-3.5 h-3.5" /> Voltar
+        <ArrowLeft className="w-3 h-3" /> Voltar
       </button>
     </div>
   );
