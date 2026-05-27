@@ -11,7 +11,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 ### 1. Fork and Clone
 Fork the repository on GitHub, then clone your fork locally:
 ```bash
-git clone https://github.com/YOUR_USERNAME/LiquidPeer.git
+git clone https://github.com/jose-pires-neto/LiquidPeer.git
 cd LiquidPeer
 ```
 
