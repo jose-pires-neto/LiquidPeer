@@ -1,4 +1,4 @@
-# LiquidPeer 💧
+# LiquidPeer 🫧
 
 ### Instant, Secure, Peer-to-Peer File Sharing Directly in Your Browser.
 
@@ -9,6 +9,8 @@
 **LiquidPeer** is a modern, serverless web application designed for direct, secure peer-to-peer (P2P) file sharing. By leveraging WebRTC protocols, files are transferred directly between devices' browsers without passing through any intermediate storage servers.
 
 Inspired by the simplicity of *AirDrop* and the nostalgic **Frutiger Aero** era, LiquidPeer features a premium **Liquid Glass** interface, combining realistic skeuomorphic glass refractions, organic liquid animations, and physics-driven micro-interactions.
+
+<img width="1693" height="929" alt="ChatGPT Image 27 de mai  de 2026, 10_57_13" src="https://github.com/user-attachments/assets/a22d00a7-40b5-40f2-967d-64993984681e" />
 
 ---
 
