@@ -197,6 +197,23 @@ function App() {
       {/* Liquid Ambient Glow Blobs */}
       <div className="absolute top-1/4 left-1/4 w-48 sm:w-72 h-48 sm:h-72 bg-sky-500/10 rounded-full blur-[80px] sm:blur-[120px] animate-glow-1 pointer-events-none z-0" />
       <div className="absolute bottom-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-blue-600/10 rounded-full blur-[100px] sm:blur-[140px] animate-glow-2 pointer-events-none z-0" />
+      <div className="absolute bottom-10 left-10 w-56 sm:w-80 h-56 sm:h-80 bg-emerald-500/4 rounded-full blur-[90px] sm:blur-[130px] animate-glow-1 pointer-events-none z-0" style={{ animationDelay: '-5s' }} />
+
+      {/* Background Floating Iridescent Bubbles (Frutiger Aero Dark Theme) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute bottom-[-100px] left-[5%] w-10 h-10 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '22s', animationDelay: '0s' }} />
+        <div className="absolute bottom-[-100px] left-[20%] w-16 h-16 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '18s', animationDelay: '3s' }} />
+        <div className="absolute bottom-[-100px] left-[35%] w-8 h-8 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '25s', animationDelay: '1s' }} />
+        <div className="absolute bottom-[-100px] left-[50%] w-12 h-12 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '20s', animationDelay: '5s' }} />
+        <div className="absolute bottom-[-100px] left-[65%] w-6 h-6 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '28s', animationDelay: '2s' }} />
+        <div className="absolute bottom-[-100px] left-[80%] w-14 h-14 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '16s', animationDelay: '4s' }} />
+        <div className="absolute bottom-[-100px] left-[90%] w-10 h-10 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '24s', animationDelay: '7s' }} />
+        
+        {/* Extra staggered bubbles */}
+        <div className="absolute bottom-[-100px] left-[15%] w-12 h-12 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '21s', animationDelay: '9s' }} />
+        <div className="absolute bottom-[-100px] left-[45%] w-7 h-7 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '26s', animationDelay: '6s' }} />
+        <div className="absolute bottom-[-100px] left-[75%] w-18 h-18 iridescent-bubble opacity-0 animate-bubble-drift" style={{ animationDuration: '19s', animationDelay: '8s' }} />
+      </div>
 
       {/* Floating Glass Toasts */}
       <ToastContainer toasts={toasts} />

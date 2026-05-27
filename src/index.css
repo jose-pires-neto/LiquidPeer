@@ -84,6 +84,37 @@
       border-radius: 26px 26px 26px 26px / 26px 26px 26px 26px;
     }
   }
+
+  --animate-bubble-drift: bubble-drift 20s linear infinite;
+
+  @keyframes bubble-drift {
+    0% {
+      transform: translateY(0) translateX(0) scale(0.5) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.55;
+    }
+    50% {
+      transform: translateY(-55vh) translateX(30px) scale(1.05) rotate(180deg);
+    }
+    85% {
+      opacity: 0.55;
+      transform: translateY(-95vh) translateX(-15px) scale(1) rotate(300deg);
+    }
+    90% {
+      transform: translateY(-100vh) translateX(-10px) scale(1.2) rotate(320deg);
+      opacity: 0.35;
+    }
+    93% {
+      transform: translateY(-100vh) translateX(-10px) scale(0) rotate(320deg);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(-115vh) translateX(0) scale(0) rotate(360deg);
+      opacity: 0;
+    }
+  }
 }
 
 @layer base {
